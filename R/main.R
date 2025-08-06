@@ -1,41 +1,49 @@
-
-
 library(shiny)
 library(data.table)
+library(readxl)      # <-- NEW: For Excel
+library(ggplot2)
+library(ggrepel)
+library(bslib)
 
-
-options(shiny.maxRequestSize = 50*1024^2)  # 50 MB limit
-
-
-ui <- fluidPage(
-    titlePanel("Seq2Viz: RNA-seq Analysis and Visualization"),
+ui <- navbarPage(
+    title = "Seq2Viz",
+    theme = bs_theme(bootswatch = "flatly"),
     
-    sidebarLayout(
-        sidebarPanel(
-            h4("Load data"),
-            fileInput("counts_file", "Upload counts.txt", 
-                      accept = c(".txt", ".tsv")),
-            helpText("Upload a counts file with gene names in the first column and sample names as column names.")
-        ),
-        
-        mainPanel(
-            h4("Preview of Uploaded Count Matrix"),
-            tableOutput("counts_preview")
-        )
+    tabPanel("Upload DESeq2 Results",
+             sidebarLayout(
+                 sidebarPanel(
+                     fileInput("deseq_file", "Upload DESeq2 results (.xlsx, .csv, .tsv)")
+                 ),
+                 mainPanel(
+                     tableOutput("deseq_preview")
+                 )
+             )
     )
+
 )
 
 server <- function(input, output, session) {
     
-    counts_data <- reactive({
-        req(input$counts_file)
-        fread(input$counts_file$datapath)
+    deseq_data <- reactive({
+        req(input$deseq_file)
+        ext <- tools::file_ext(input$deseq_file$name)
+        
+        if (ext %in% c("xlsx", "xls")) {
+            read_excel(input$deseq_file$datapath)
+        } else if (ext == "csv") {
+            fread(input$deseq_file$datapath)
+        } else if (ext %in% c("tsv", "txt")) {
+            fread(input$deseq_file$datapath, sep = "\t")
+        } else {
+            validate("Unsupported file format. Please upload .xlsx, .csv, or .tsv")
+        }
     })
     
-    output$counts_preview <- renderTable({
-        head(counts_data(), 10)
+    output$deseq_preview <- renderTable({
+        head(deseq_data(), 10)
     })
     
+
 }
 
 shinyApp(ui, server)
