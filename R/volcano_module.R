@@ -1,5 +1,5 @@
 
-source("libraries.R")
+# source("libraries.R")
 
 volcanoUI <- function(id) {
     ns <- NS(id)
@@ -20,7 +20,7 @@ volcanoServer <- function(input, output, session, deseq_data) {
         df <- deseq_data()
         
         req(df)
-        req(all(c("log2FoldChange", "padj", "GeneID") %in% colnames(df)))
+        req(all(c("log2FoldChange", "padj", "Geneid") %in% colnames(df)))
         
         logfc_cutoff <- input$logfc_cutoff
         padj_cutoff <- input$padj_cutoff
@@ -48,7 +48,7 @@ volcanoServer <- function(input, output, session, deseq_data) {
             geom_vline(xintercept = c(-logfc_cutoff, logfc_cutoff), linewidth = 0.3, linetype = "dashed") +
             geom_hline(yintercept = -log10(padj_cutoff), linewidth = 0.3, linetype = "dashed") +
             geom_point(data = df2, aes(x = log2FoldChange, y = y, fill = ann), shape = 21, stroke = 0.15, size = 2, color = "white") +
-            geom_text_repel(data = df2, aes(label = GeneID), max.overlaps = Inf, fontface = "bold", size = 2.5, bg.color = "white", bg.r = 0.05) +
+            geom_text_repel(data = df2, aes(label = Geneid), max.overlaps = Inf, fontface = "bold", size = 2.5, bg.color = "white", bg.r = 0.05) +
             scale_fill_manual(
                 values = c(
                     "Up regulated" = "#990000",

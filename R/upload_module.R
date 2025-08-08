@@ -1,37 +1,56 @@
 
-source("libraries.R")
+# source("libraries.R")
 
 uploadUI <- function(id) {
     ns <- NS(id)
     sidebarLayout(
         sidebarPanel(
-            fileInput(ns("deseq_file"), "Upload DESeq2 results (.xlsx, .csv, .tsv)")
+            fileInput(ns("deseq_file"), "Upload DESeq2 results (.xlsx, .csv, .tsv)"),
+            fileInput(ns("metadata_file"), "Upload Sample Metadata (.xlsx, .csv, .tsv)"),
+            fileInput(ns("counts_file"), "Upload Counts (.txt, .csv, .tsv)")
         ),
         mainPanel(
-            tableOutput(ns("deseq_preview"))
+            h4("DESeq2 Results Preview"),
+            tableOutput(ns("deseq_preview")),
+            hr(),
+            h4("Sample Metadata Preview"),
+            tableOutput(ns("metadata_preview")),
+            hr(),
+            h4("Counts Preview"),
+            tableOutput(ns("counts_preview"))
         )
     )
 }
-
 uploadServer <- function(input, output, session) {
-    data <- reactive({
-        req(input$deseq_file)
-        ext <- tools::file_ext(input$deseq_file$name)
-        
+    
+    # Helper function to read files
+    read_file <- function(file) {
+        req(file)
+        ext <- tools::file_ext(file$name)
         if (ext %in% c("xlsx", "xls")) {
-            as.data.table(readxl::read_xlsx(input$deseq_file$datapath))
+            dt <- as.data.table(readxl::read_xlsx(file$datapath))
         } else if (ext == "csv") {
-            fread(input$deseq_file$datapath)
+            dt <- fread(file$datapath)
         } else if (ext %in% c("tsv", "txt")) {
-            fread(input$deseq_file$datapath, sep = "\t")
+            dt <- fread(file$datapath, sep = "\t")
         } else {
-            validate("Unsupported file format. Please upload .xlsx, .csv, or .tsv")
+            validate(paste("Unsupported file format:", file$name))
         }
-    })
+        dt
+    }
     
-    output$deseq_preview <- renderTable({
-        head(data(), 10)
-    })
+    deseq_data <- reactive({ read_file(input$deseq_file) })
+    metadata_data <- reactive({ read_file(input$metadata_file) })
+    counts_data <- reactive({ read_file(input$counts_file) })
     
-    return(data)
+    output$deseq_preview <- renderTable({ head(deseq_data(), 10) })
+    output$metadata_preview <- renderTable({ head(metadata_data(), 10) })
+    output$counts_preview <- renderTable({ head(counts_data(), 10) })
+    
+    # Return a list of the three reactives
+    list(
+        deseq = deseq_data,
+        metadata = metadata_data,
+        counts = counts_data
+    )
 }
