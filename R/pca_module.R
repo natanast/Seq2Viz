@@ -1,8 +1,10 @@
+
 pcaUI <- function(id) {
+    
     ns <- NS(id)
     sidebarLayout(
         sidebarPanel(
-            uiOutput(ns("group_selector"))   # dynamic group selector from metadata columns
+            uiOutput(ns("group_selector"))   
         ),
         mainPanel(
             plotOutput(ns("pca_plot"), height = "700px")
@@ -80,18 +82,33 @@ pcaServer <- function(input, output, session, meta_data, counts_data) {
         
         label_col <- if ("patientID" %in% colnames(pca_dt)) "patientID" else "sampleID"
         
+        # Get unique groups and remove NA
+        groups <- unique(pca_dt[[group_col]])
+        groups <- groups[!is.na(groups)]
+        
+        n_groups <- length(groups)
+        base_fill_colors <- c("#990000", "#004d99")  # your original fill colors
+        base_color_colors <- c("#990000", "#004d99") # your original border colors
+        
+        # Generate enough colors by interpolating your base colors
+        pal_fill <- colorspace::lighten(
+            grDevices::colorRampPalette(base_fill_colors)(n_groups),
+            amount = 0.25
+        )
+        pal_color <- colorspace::darken(
+            grDevices::colorRampPalette(base_color_colors)(n_groups),
+            amount = 0.25
+        )
+        
+        names(pal_fill) <- groups
+        names(pal_color) <- groups
+        
         ggplot(pca_dt, aes_string(x = "PC1", y = "PC2", fill = group_col, color = group_col)) +
             ggforce::geom_mark_circle(alpha = 0.1, expand = unit(1.5, "mm")) +
             geom_point(shape = 21, size = 3, stroke = 0.25) +
             ggrepel::geom_text_repel(aes_string(label = label_col), fontface = "bold", size = 2, bg.color = "white", bg.r = 0.05) +
-            scale_fill_manual(
-                values = c("BIRC3_c1639del" = "#990000", "empty_backbone" = "#004d99") |> colorspace::lighten(0.25),
-                na.value = "grey"
-            ) +
-            scale_color_manual(
-                values = c("BIRC3_c1639del" = "#990000", "empty_backbone" = "#004d99") |> colorspace::darken(0.25),
-                na.value = "grey"
-            ) +
+            scale_fill_manual(values = pal_fill, na.value = "grey") +
+            scale_color_manual(values = pal_color, na.value = "grey") +
             theme_minimal() +
             theme(
                 legend.position = "bottom",
@@ -102,4 +119,6 @@ pcaServer <- function(input, output, session, meta_data, counts_data) {
             ) +
             labs(x = pc1_lab, y = pc2_lab)
     })
+    
+    
 }

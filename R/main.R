@@ -2,10 +2,11 @@
 source("libraries.R")
 source("upload_module.R")
 source("volcano_module.R")
-source("pca_module.R")   # <-- Add this line
+source("pca_module.R")   
 
 
 ui <- navbarPage(
+    
     title = "Seq2Viz",
     theme = bs_theme(bootswatch = "flatly"),
     
@@ -23,6 +24,7 @@ ui <- navbarPage(
 )
 
 server <- function(input, output, session) {
+    
     # Call Upload module: returns a list of reactive datasets
     data_list <- callModule(uploadServer, "upload1")
     
