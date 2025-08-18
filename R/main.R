@@ -19,7 +19,7 @@ ui <- navbarPage(
     ),
 
     tabPanel("PCA Plot",
-             pca_ui("pca1")
+             pcaUi("pca1")
     )
 )
 

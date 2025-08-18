@@ -1,5 +1,5 @@
 
-pcaUI <- function(id) {
+pcaUi <- function(id) {
     
     ns <- NS(id)
     sidebarLayout(
