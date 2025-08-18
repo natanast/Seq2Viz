@@ -18,7 +18,6 @@ ui <- navbarPage(
             fluidRow(
                 column(
                     width = 8,
-                    h3("Hello and welcome!"),
                     p("This app allows you to explore your data through interactive plots."),
                     p("You can upload your files on the first page, then navigate to:"),
                     tags$ul(
