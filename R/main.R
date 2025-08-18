@@ -10,7 +10,11 @@ ui <- navbarPage(
     title = "Seq2Viz",
     theme = bs_theme(bootswatch = "flatly"),
     
-    tabPanel("Upload DESeq2 Results",
+    tabPanel("Home",
+             uploadUI("upload1")
+    ),
+    
+    tabPanel("Upload files",
              uploadUI("upload1")
     ),
     
