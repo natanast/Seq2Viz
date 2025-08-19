@@ -8,8 +8,16 @@ source("pca_module.R")
 ui <- navbarPage(
     
     title = "Seq2Viz",
-    theme = bs_theme(bootswatch = "flatly"),
     
+    # theme = bs_theme(bootswatch = "flatly"),
+    
+    theme = bs_theme(
+        preset = "cosmo",
+        bg = "#F3F6FA",
+        fg = "#456f82",
+        base_font = font_google("Jost")
+    ),
+
     # Welcome tab
     tabPanel(
         "Home",
