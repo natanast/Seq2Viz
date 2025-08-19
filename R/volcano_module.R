@@ -6,7 +6,8 @@ volcanoUI <- function(id) {
     sidebarLayout(
         sidebarPanel(
             numericInput(ns("logfc_cutoff"), "Log2FC cutoff", 1),
-            numericInput(ns("padj_cutoff"), "Adjusted p-value cutoff", 0.05)
+            numericInput(ns("padj_cutoff"), "Adjusted p-value cutoff", 0.05),
+            downloadButton(ns("download_plot"), "Download Plot")
         ),
         mainPanel(
             plotOutput(ns("volcano_plot"), height = "700px")
@@ -15,7 +16,8 @@ volcanoUI <- function(id) {
 }
 
 volcanoServer <- function(input, output, session, deseq_data) {
-    output$volcano_plot <- renderPlot({
+    
+    volcano_plot <- reactive({
         
         df <- deseq_data()
         
@@ -75,4 +77,22 @@ volcanoServer <- function(input, output, session, deseq_data) {
             ) +
             labs(x = "log2(Fold Change)", y = "-log10(padj)")
     })
+    
+    
+    output$volcano_plot <- renderPlot({
+        volcano_plot()
+    })
+    
+    output$download_plot <- downloadHandler(
+        filename = function() {
+            paste0("volcano_plot_", Sys.Date(), ".png")
+        },
+        content = function(file) {
+            ggsave(file, plot = volcano_plot(), width = 10, height = 10, dpi = 300)
+        }
+    )
+    
 }
+
+
+

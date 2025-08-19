@@ -5,7 +5,7 @@ pcaUI <- function(id) {
     sidebarLayout(
         sidebarPanel(
             uiOutput(ns("group_selector")),
-            downloadButton(ns("download_plot"), "Download PCA Plot")
+            downloadButton(ns("download_plot"), "Download Plot")
         ),
         mainPanel(
             plotOutput(ns("pca_plot"), height = "700px")
@@ -137,9 +137,10 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
             paste0("PCA_plot_", Sys.Date(), ".png")
         },
         content = function(file) {
-            ggsave(file, plot = plot_pca(), width = 8, height = 8, dpi = 300)
+            ggsave(file, plot = plot_pca(), width = 10, height = 10, dpi = 300)
         }
     )
+    
     
     
 }
