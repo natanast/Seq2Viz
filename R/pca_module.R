@@ -4,7 +4,8 @@ pcaUI <- function(id) {
     ns <- NS(id)
     sidebarLayout(
         sidebarPanel(
-            uiOutput(ns("group_selector"))   
+            uiOutput(ns("group_selector")),
+            downloadButton(ns("download_plot"), "Download PCA Plot")
         ),
         mainPanel(
             plotOutput(ns("pca_plot"), height = "700px")
@@ -26,10 +27,6 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
         }
         
         # --- filter significant genes ---
-
-        req(deseq)
-        req(all(c("log2FoldChange", "padj", "Geneid") %in% colnames(deseq)))
-
         sig_results <- deseq[which((padj <= 0.05) & abs(log2FoldChange) >= 2)]
         sig_genes   <- sig_results$Geneid
         counts <- counts[gene_name %in% sig_genes]
@@ -80,7 +77,7 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
         list(pca_dt = pca_dt, pca = pca)
     })
     
-    output$pca_plot <- renderPlot({
+    plot_pca <- reactive({
         res <- pca_results()
         pca_dt <- res$pca_dt
         pca <- res$pca
@@ -129,6 +126,20 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
             ) +
             labs(x = pc1_lab, y = pc2_lab)
     })
+    
+    
+    output$pca_plot <- renderPlot({
+        plot_pca()
+    })
+    
+    output$download_plot <- downloadHandler(
+        filename = function() {
+            paste0("PCA_plot_", Sys.Date(), ".png")
+        },
+        content = function(file) {
+            ggsave(file, plot = plot_pca(), width = 8, height = 8, dpi = 300)
+        }
+    )
     
     
 }
