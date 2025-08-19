@@ -52,7 +52,7 @@ server <- function(input, output, session) {
     callModule(volcanoServer, "volcano1", data_list$deseq)
     
     # Pass metadata and counts to PCA module
-    callModule(pcaServer, "pca1", data_list$metadata, data_list$counts)
+    callModule(pcaServer, "pca1", data_list$metadata, data_list$counts, data_list$deseq)
     
 }
 

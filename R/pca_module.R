@@ -12,18 +12,28 @@ pcaUI <- function(id) {
     )
 }
 
-pcaServer <- function(input, output, session, meta_data, counts_data) {
+pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data) {
     
     data_list <- reactive({
-        req(meta_data(), counts_data())
+        req(meta_data(), counts_data(), deseq_data())
         meta <- meta_data()
         counts <- counts_data()
+        deseq <- deseq_data()
         
         # Rename Geneid to gene_name if needed (match column name)
         if ("Geneid" %in% colnames(counts) && !"gene_name" %in% colnames(counts)) {
             setnames(counts, "Geneid", "gene_name")
         }
         
+        # --- filter significant genes ---
+
+        req(deseq)
+        req(all(c("log2FoldChange", "padj", "Geneid") %in% colnames(deseq)))
+
+        sig_results <- deseq[which((padj <= 0.05) & abs(log2FoldChange) >= 2)]
+        sig_genes   <- sig_results$Geneid
+        counts <- counts[gene_name %in% sig_genes]
+
         list(meta = meta, counts = counts)
     })
     
@@ -106,7 +116,7 @@ pcaServer <- function(input, output, session, meta_data, counts_data) {
         ggplot(pca_dt, aes_string(x = "PC1", y = "PC2", fill = group_col, color = group_col)) +
             ggforce::geom_mark_circle(alpha = 0.1, expand = unit(1.5, "mm")) +
             geom_point(shape = 21, size = 3, stroke = 0.25) +
-            ggrepel::geom_text_repel(aes_string(label = label_col), fontface = "bold", size = 2, bg.color = "white", bg.r = 0.05) +
+            ggrepel::geom_text_repel(aes_string(label = label_col), fontface = "bold", size = 3, bg.color = "white", bg.r = 0.05) +
             scale_fill_manual(values = pal_fill, na.value = "grey") +
             scale_color_manual(values = pal_color, na.value = "grey") +
             theme_minimal() +
