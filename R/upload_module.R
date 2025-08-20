@@ -1,5 +1,25 @@
-
-# source("libraries.R")
+# 
+# 
+# uploadUI <- function(id) {
+#     ns <- NS(id)
+#     sidebarLayout(
+#         sidebarPanel(
+#             fileInput(ns("deseq_file"), "Upload DESeq2 results (.xlsx, .csv, .tsv)"),
+#             fileInput(ns("metadata_file"), "Upload Sample Metadata (.xlsx, .csv, .tsv)"),
+#             fileInput(ns("counts_file"), "Upload Counts (.txt, .csv, .tsv)")
+#         ),
+#         mainPanel(
+#             h4("DESeq2 Results Preview"),
+#             tableOutput(ns("deseq_preview")),
+#             hr(),
+#             h4("Sample Metadata Preview"),
+#             tableOutput(ns("metadata_preview")),
+#             hr(),
+#             h4("Counts Preview"),
+#             tableOutput(ns("counts_preview"))
+#         )
+#     )
+# }
 
 uploadUI <- function(id) {
     ns <- NS(id)
@@ -7,7 +27,8 @@ uploadUI <- function(id) {
         sidebarPanel(
             fileInput(ns("deseq_file"), "Upload DESeq2 results (.xlsx, .csv, .tsv)"),
             fileInput(ns("metadata_file"), "Upload Sample Metadata (.xlsx, .csv, .tsv)"),
-            fileInput(ns("counts_file"), "Upload Counts (.txt, .csv, .tsv)")
+            fileInput(ns("counts_file"), "Upload Counts (.txt, .csv, .tsv)"),
+            style = "border-radius: 1rem; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); padding: 1rem; background-color: #fff;"
         ),
         mainPanel(
             h4("DESeq2 Results Preview"),
@@ -17,10 +38,12 @@ uploadUI <- function(id) {
             tableOutput(ns("metadata_preview")),
             hr(),
             h4("Counts Preview"),
-            tableOutput(ns("counts_preview"))
+            tableOutput(ns("counts_preview")),
+            style = "border-radius: 1rem; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); padding: 1rem; background-color: #fff;"
         )
     )
 }
+
 
 
 uploadServer <- function(input, output, session) {
