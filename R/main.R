@@ -21,26 +21,6 @@ ui <- navbarPage(
     ),
 
     # Welcome tab
-    # tabPanel(
-    #     "Home",
-    #     fluidPage(
-    #         titlePanel("Welcome"),
-    #         fluidRow(
-    #             column(
-    #                 width = 8,
-    #                 p("This app allows you to explore your data through interactive plots."),
-    #                 p("You can upload your files on the first page, then navigate to:"),
-    #                 tags$ul(
-    #                     tags$li("Volcano plot tab to visualize differential expression."),
-    #                     tags$li("PCA plot tab to explore sample clustering.")
-    #                 ),
-    #                 p("Start by uploading your data on the Upload tab!")
-    #             )
-    #         )
-    #     )
-    # ),
-    
-    # Welcome tab
     tabPanel(
         "Home",
         fluidPage(
