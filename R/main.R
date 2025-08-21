@@ -12,10 +12,10 @@ ui <- navbarPage(
     theme = bs_theme(
         preset = "cosmo",
         bg = "#F3F6FA",
-        fg = "#386375",
+        fg = "#2b5769",
         base_font = font_google("Jost"),
-        "navbar-bg" = "#2b5769",   
-        "navbar-fg" = "#F3F6FA"    
+        # "navbar-bg" = "#2b5769",   
+        "navbar-fg" = "#F3F6FA"
     ),
 
 
@@ -39,11 +39,15 @@ ui <- navbarPage(
                     card(
                         title = "How to Use This App",
                         h3("How to Use This App", style = "color:#2b5769;"),
-                        h5("Begin by uploading your RNA-seq datasets on the Upload tab. Then navigate through the following features:",
+                        h5("Begin by uploading your RNA-seq datasets on the Upload tab.",
                            style = "color:#386375;"),
+                        h5("Then navigate through the following features:", style = "color:#386375;"),
                         tags$ul(
+                            tags$li("PCA Plot: Explore sample clustering and relationships.", style = "color:#386375;"),
                             tags$li("Volcano Plot: Visualize differential gene expression.", style = "color:#386375;"),
-                            tags$li("PCA Plot: Explore sample clustering and relationships.", style = "color:#386375;")
+                            tags$li("Heatmaps", style = "color:#386375;"),
+                            tags$li("GSEA analysis", style = "color:#386375;"),
+                            tags$li("ORA analysis", style = "color:#386375;"),
                         ),
                         style = "margin-bottom: 1rem; border-radius: 1rem; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); padding: 1rem;"
                     ),
