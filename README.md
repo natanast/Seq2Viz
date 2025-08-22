@@ -12,6 +12,12 @@ Clone this repository:
 git clone https://github.com/natanast/Seq2Viz.git
 ```
 
+## Usage
+
+## Contibution
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+The code contained in this website is simultaneously available under the MIT license; this means that you are free to use it in your own packages, as long as you cite the source.
