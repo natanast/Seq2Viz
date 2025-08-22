@@ -61,39 +61,6 @@ ui <- navbarPage(
                     ),
                     
 
-                    # # How to Use Card
-                    # card(
-                    #     title = "How to Use This App",
-                    #     h3("How to Use This App", style = "color:#2b5769;"),
-                    #     h5("Begin by uploading your RNA-seq datasets on the Upload tab.",
-                    #        style = "color:#386375;"),
-                    #     h5("Then navigate through the following features:", style = "color:#386375;"),
-                    #     tags$ul(
-                    #         tags$li("PCA Plot: Explore sample clustering and relationships.", style = "color:#386375;"),
-                    #         tags$li("Volcano Plot: Visualize differential gene expression.", style = "color:#386375;"),
-                    #         tags$li("Heatmaps", style = "color:#386375;"),
-                    #         tags$li("GSEA analysis", style = "color:#386375;"),
-                    #         tags$li("ORA analysis", style = "color:#386375;"),
-                    #     ),
-                    #     style = "margin-bottom: 1rem; border-radius: 1rem; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); padding: 1rem;"
-                    # ),
-                    # 
-                    # # Instructions Card
-                    # card(
-                    #     title = "Instructions",
-                    #     h3("Step-by-Step Instructions", style = "color:#2b5769;"),
-                    #     tags$ol(
-                    #         tags$li("Upload your RNA-seq files on the Upload tab (DESeq2 results, metadata, counts).", style = "color:#386375;"),
-                    #         tags$li("Go to the PCA Plot tab to visualize sample clustering.", style = "color:#386375;"),
-                    #         tags$li("Visit the Volcano Plot tab to explore differentially expressed genes.", style = "color:#386375;"),
-                    #         tags$li("Use the Heatmaps tab to inspect gene expression patterns across samples.", style = "color:#386375;"),
-                    #         tags$li("Run GSEA or ORA analysis on the corresponding tabs to explore pathway enrichment.", style = "color:#386375;")
-                    #     ),
-                    #     h5("Hover over plots to see detailed information. Adjust cutoffs and settings to filter results.", style = "color:#386375;"),
-                    #     style = "margin-bottom: 1rem; border-radius: 1rem; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); padding: 1rem;"
-                    # ),
-                    
-                    
                     # Feedback Card
                     card(
                         title = "Feedback & Contribution",
@@ -104,13 +71,13 @@ ui <- navbarPage(
                     ),
                     
                     # License Card
-                    card(
-                        title = "License",
-                        h4("License", style = "color:#2b5769;"),
-                        h6("This app is licensed under the MIT license. You are free to use and modify it, as long as the source is cited.", 
-                           style = "color:#386375;"),
-                        style = "margin-bottom: 1rem; border-radius: 1rem; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); padding: 1rem;"
-                    )
+                    # card(
+                    #     title = "License",
+                    #     h4("License", style = "color:#2b5769;"),
+                    #     h6("This app is licensed under the MIT license.", 
+                    #        style = "color:#386375;"),
+                    #     style = "margin-bottom: 1rem; border-radius: 1rem; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); padding: 1rem;"
+                    # )
                 )
             )
         )
