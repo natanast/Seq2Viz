@@ -43,6 +43,7 @@ To use Seq2Viz, provide the following datasets:
 
 ## Contributing
 Contributions are welcome!
+Report bugs or suggest features via [GitHub Issues](https://github.com/natanast/Seq2Viz/issues)
 
 ## License
 
