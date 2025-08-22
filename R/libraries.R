@@ -9,3 +9,5 @@ library(ggrepel)
 library(colorspace)
 library(shadowtext)
 library(bslib)
+library(shinyWidgets)
+
