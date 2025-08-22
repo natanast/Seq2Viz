@@ -35,12 +35,17 @@ To use Seq2Viz, provide the following datasets:
    - Must contain `sampleID`, `patientID`, and `Group1` columns.
 
 
+## How to Use This App
+1. Upload your datasets under the Upload files tab.
+2. Explore sample clustering and relationships in the PCA Plot tab.
+3. Visualize differential expression in the Volcano Plot tab.
 
-## Contibution
+
+## Contributing
 Contributions are welcome!
 
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-The code contained in this website is simultaneously available under the MIT license; this means that you are free to use it in your own packages, as long as you cite the source.
+The code contained in this repository is simultaneously available under the MIT license; this means that you are free to use it in your own packages, as long as you cite the source.
