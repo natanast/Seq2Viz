@@ -59,7 +59,7 @@ To help you try the app quickly, example files are included in `example_data/`.
 **Current coverage**
 - ✅ PCA Plot  
 - ✅ Volcano Plot  
-- ⏳ Heatmap / ORA / GSEA (coming soon)
+- ⏳ Heatmap (coming soon)
 
 
 ## Contributing
