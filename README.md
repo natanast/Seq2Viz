@@ -51,6 +51,16 @@ To help you try the app quickly, example files are included in `example_data/`.
 - `example_data/gene_counts_deseq2_normalized.txt` — normalized counts
 - `example_data/sample_metadata.xlsx` — sample annotations
 
+**How to try**
+1. Launch the app (see **Usage** above).  
+2. Go to **`Upload files`** and select the three files from `example_data/`.  
+3. Open **`PCA Plot`** (you should see two groups) and **`Volcano Plot`** (a small set of DE genes).
+
+**Current coverage**
+- ✅ PCA Plot  
+- ✅ Volcano Plot  
+- ⏳ Heatmap / ORA / GSEA (coming soon)
+
 
 ## Contributing
 Contributions are welcome!
