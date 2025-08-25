@@ -43,7 +43,7 @@ homeUI <- function(id) {
                 card(
                     title = "Feedback & Contribution",
                     h4("Feedback & Contribution", style = "color:#2b5769;"),
-                    h6(HTML("Report bugs or suggest new features via <a href='https://github.com/your-repo/issues'>GitHub Issues</a> or contact us via <a href='mailto:your-email@example.com'>email</a>."),
+                    h6(HTML("Report bugs or suggest new features via <a href='https://github.com/natanast/Seq2Viz/issues'>GitHub Issues</a>."),
                        style = "color:#386375;"),
                     style = "margin-bottom: 1rem; border-radius: 1rem; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); padding: 1rem;"
                 )
