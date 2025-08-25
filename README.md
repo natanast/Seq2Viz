@@ -42,6 +42,16 @@ To use Seq2Viz, provide the following datasets:
 4. Explore pathway enrichment with the **`ORA`**  and **`GSEA`** tabs.
 
 
+## Test Data
+
+To help you try the app quickly, example files are included in `example_data/`. 
+
+**Files**
+- `example_data/deseq2_treatment_vs_control.xlsx` — DESeq2 results
+- `example_data/gene_counts_deseq2_normalized.txt` — normalized counts
+- `example_data/sample_metadata.xlsx` — sample annotations
+
+
 ## Contributing
 Contributions are welcome!
 Report bugs or suggest features via [GitHub Issues](https://github.com/natanast/Seq2Viz/issues)
