@@ -12,12 +12,12 @@ git clone https://github.com/natanast/Seq2Viz.git
 ```
 
 ## Required packages
-```bash
+```r
 install.packages(c("shiny", "bslib", "shinyWidgets", "ggplot2", "dplyr"))
 ```
 
 ## Usage
-```bash
+```r
 library(shiny)
 runApp("R/main.R")
 ```
@@ -36,9 +36,10 @@ To use Seq2Viz, provide the following datasets:
 
 
 ## How to Use This App
-1. Upload your datasets under the Upload files tab.
-2. Explore sample clustering and relationships in the PCA Plot tab.
-3. Visualize differential expression in the Volcano Plot tab.
+1. Upload your datasets under the **`Upload files`** tab.
+2. Explore sample clustering and relationships in the **`PCA Plot`** tab.
+3. Visualize differential expression in the **`Volcano Plot`** and **`Heatmap`** tabs. .
+4. Explore pathway enrichment with the **`ORA`**  and **`GSEA`** tabs.
 
 
 ## Contributing
