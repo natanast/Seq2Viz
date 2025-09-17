@@ -15,7 +15,6 @@ ui <- navbarPage(
         bg = "#F3F6FA",
         fg = "#2b5769",
         base_font = font_google("Jost"),
-        # "navbar-bg" = "#2b5769",   
         "navbar-fg" = "#F3F6FA"
     ),
 
@@ -40,7 +39,7 @@ ui <- navbarPage(
     ),
 
     tabPanel("Heatmap",
-             # heatmapUI("heatmap1")
+             heatmapUI("heatmap")
     )
 )
 
