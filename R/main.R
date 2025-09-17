@@ -32,15 +32,15 @@ ui <- navbarPage(
     ),
     
     tabPanel("PCA Plot",
-             pcaUI("pca1")
+             pcaUI("pca")
     ),
     
     tabPanel("Volcano Plot",
-             volcanoUI("volcano1")
+             volcanoUI("volcano")
     ),
 
-    tabPanel("Heatmap"
-             # pcaUI("pca1")
+    tabPanel("Heatmap",
+             # heatmapUI("heatmap1")
     )
 )
 
@@ -50,10 +50,10 @@ server <- function(input, output, session) {
     data_list <- callModule(uploadServer, "upload1")
     
     # Pass DESeq2 data to volcano plot module
-    callModule(volcanoServer, "volcano1", data_list$deseq)
+    callModule(volcanoServer, "volcano", data_list$deseq)
     
     # Pass metadata and counts to PCA module
-    callModule(pcaServer, "pca1", data_list$metadata, data_list$counts, data_list$deseq)
+    callModule(pcaServer, "pca", data_list$metadata, data_list$counts, data_list$deseq)
     
 }
 
