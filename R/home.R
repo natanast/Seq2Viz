@@ -32,8 +32,8 @@ homeUI <- function(id) {
                         tags$li("PCA Plot: Explore sample clustering and relationships.", style = "color:#386375;"),
                         tags$li("Volcano Plot: Visualize differential gene expression.", style = "color:#386375;"),
                         tags$li("Heatmaps: Inspect gene expression patterns across samples.", style = "color:#386375;"),
-                        tags$li("GSEA analysis: Explore pathway enrichment.", style = "color:#386375;"),
-                        tags$li("ORA analysis: Run over-representation analysis.", style = "color:#386375;")
+                        # tags$li("GSEA analysis: Explore pathway enrichment.", style = "color:#386375;"),
+                        # tags$li("ORA analysis: Run over-representation analysis.", style = "color:#386375;")
                     ),
                     h6("Tip: Hover over plots for detailed information. Adjust cutoffs and settings to filter results.", style = "color:#386375;"),
                     style = "margin-bottom: 1rem; border-radius: 1rem; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); padding: 1rem;"

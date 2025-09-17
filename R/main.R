@@ -31,14 +31,14 @@ ui <- navbarPage(
              uploadUI("upload1")
     ),
     
-    tabPanel("Volcano Plot",
-             volcanoUI("volcano1")
-    ),
-
     tabPanel("PCA Plot",
              pcaUI("pca1")
     ),
     
+    tabPanel("Volcano Plot",
+             volcanoUI("volcano1")
+    ),
+
     tabPanel("Heatmap"
              # pcaUI("pca1")
     )
