@@ -37,6 +37,10 @@ ui <- navbarPage(
 
     tabPanel("PCA Plot",
              pcaUI("pca1")
+    ),
+    
+    tabPanel("Heatmap"
+             # pcaUI("pca1")
     )
 )
 
