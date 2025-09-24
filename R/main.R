@@ -39,8 +39,8 @@ ui <- navbarPage(
              volcanoUI("volcano")
     ),
 
-    tabPanel("Heatmap",
-             heatmapUI("heatmap")
+    tabPanel("Heatmap"
+             # heatmapUI("heatmap")
     )
 )
 
