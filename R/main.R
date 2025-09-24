@@ -46,13 +46,13 @@ ui <- navbarPage(
 
 server <- function(input, output, session) {
     
-    # Call Upload module: returns a list of reactive datasets
+    # returns a list of reactive datasets
     data_list <- callModule(uploadServer, "upload1")
     
-    # Pass DESeq2 data to volcano plot module
+    
     callModule(volcanoServer, "volcano", data_list$deseq)
     
-    # Pass metadata and counts to PCA module
+    
     callModule(pcaServer, "pca", data_list$metadata, data_list$counts, data_list$deseq)
     
 }
