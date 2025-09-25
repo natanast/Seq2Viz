@@ -1,19 +1,4 @@
-# 
-# 
-# volcanoUI <- function(id) {
-#     ns <- NS(id)
-#     sidebarLayout(
-#         sidebarPanel(
-#             numericInput(ns("logfc_cutoff"), "Log2FC cutoff", 1),
-#             numericInput(ns("padj_cutoff"), "Adjusted p-value cutoff", 0.05),
-#             downloadButton(ns("download_plot"), "Download Plot")
-#         ),
-#         mainPanel(
-#             plotOutput(ns("volcano_plot"), height = "700px")
-#         )
-#     )
-# }
-# 
+
 # volcanoServer <- function(input, output, session, deseq_data) {
 #     
 #     volcano_plot <- reactive({
