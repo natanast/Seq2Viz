@@ -4,6 +4,7 @@ source("upload.R")
 source("volcano.R")
 source("pca.R")   
 source("home.R")
+source("heatmap.R")
 
 
 ui <- navbarPage(
@@ -39,8 +40,8 @@ ui <- navbarPage(
              volcanoUI("volcano")
     ),
 
-    tabPanel("Heatmap"
-             # heatmapUI("heatmap")
+    tabPanel("Heatmap",
+             heatmapUI("heat1")
     )
 )
 
@@ -54,6 +55,16 @@ server <- function(input, output, session) {
     
     
     callModule(pcaServer, "pca", data_list$metadata, data_list$counts, data_list$deseq)
+    
+    
+    # Heatmap: PASS the reactives from data_list (NOT 'reactive_meta' etc)
+    heatmapServer(
+        "heat1",
+        meta_data   = data_list$metadata,
+        counts_data = data_list$counts,
+        deseq_data  = data_list$deseq
+    )
+    
     
 }
 
