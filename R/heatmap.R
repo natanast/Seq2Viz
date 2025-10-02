@@ -16,6 +16,12 @@ heatmapUI <- function(id) {
                              choices = c("Supervised (by Group)" = "supervised",
                                          "Unsupervised (cluster columns)" = "unsupervised"),
                              selected = "supervised"),
+                radioButtons(
+                    ns("filter_column"), 
+                    "Filter DE genes by:", 
+                    choices = c("pvalue" = "pvalue", "padj" = "padj"), 
+                    selected = "pvalue"
+                ),
                 numericInput(ns("pval_thresh"), "p-value threshold", value = 0.05, min = 0, step = 0.01),
                 numericInput(ns("lfc_thresh"), "abs(log2FoldChange) threshold", value = 1, min = 0, step = 0.1),
                 numericInput(ns("min_row_sum"), "Min gene total across samples (rowSums)", value = 10, min = 0, step = 1),
@@ -67,9 +73,15 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
             req(("pvalue" %in% colnames(deseq) && "log2FoldChange" %in% colnames(deseq)),
                 "deseq must contain 'pvalue' and 'log2FoldChange' columns")
             
+            # Determine which column to filter on (pvalue or padj)
+            filter_col <- req(input$filter_column)  # user choice: "pvalue" or "padj"
+            if (!(filter_col %in% colnames(deseq))) stop(paste0("Column '", filter_col, "' not found in DESeq2 results."))
+            
             # Filter DE genes
-            pth <- req(input$pval_thresh); lfc <- req(input$lfc_thresh)
-            d_sig <- deseq[which(pvalue <= pth & abs(log2FoldChange) >= lfc)]
+            pth <- req(input$pval_thresh)
+            lfc <- req(input$lfc_thresh)
+            d_sig <- deseq[get(filter_col) <= pth & abs(log2FoldChange) >= lfc]
+            
             gene_index <- sort(unique(d_sig$GeneID %||% d_sig$Geneid %||% d_sig$gene_id))
             if (length(gene_index) == 0) stop("No significant genes found with the chosen thresholds.")
             
@@ -89,14 +101,14 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
                 } else {
                     ann$Group1 <- as.factor(ann$Group1)
                 }
-                # IMPORTANT: order samples by Group (this reproduces your supervised script)
+                # order samples by Group
                 ann <- ann[order(ann$Group1)]
             } else {
                 # Unsupervised: keep metadata ordering as-is (or by Sample)
                 ann <- ann[order(ann$Sample)]
             }
             
-            # Reorder counts columns to match ann$Sample (this ensures column_split works correctly)
+            # Reorder counts columns to match ann$Sample
             sel_samples <- intersect(ann$Sample, sample_cols)
             if (length(sel_samples) == 0) stop("No sample names overlap between metadata$Sample and counts columns.")
             mm <- as.matrix(counts_sub[, sel_samples, with = FALSE])
@@ -120,6 +132,7 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
             
             list(mat = mm, ann = ann)
         })
+        
         
         build_heatmap <- reactive({
             prep <- heatmap_prep(); req(prep)
@@ -175,6 +188,12 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
             )
             
             ht
+        })
+        
+        observe({
+            req(input$filter_column)
+            new_label <- if (input$filter_column == "pvalue") "p-value threshold" else "padj threshold"
+            updateNumericInput(session, "pval_thresh", label = new_label)
         })
         
         output$heatmap_plot <- renderPlot({
