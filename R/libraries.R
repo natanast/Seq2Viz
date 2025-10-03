@@ -11,3 +11,7 @@ library(shadowtext)
 library(bslib)
 library(shinyWidgets)
 
+library(ComplexHeatmap)
+library(circlize)
+library(colorRamp2)
+library(ggplotify)

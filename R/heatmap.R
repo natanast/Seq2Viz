@@ -1,11 +1,4 @@
-# R/heatmap.R
-library(shiny)
-library(data.table)
-library(ComplexHeatmap)
-library(circlize)
-library(colorRamp2)
-library(ggplot2)
-library(ggplotify)
+
 
 heatmapUI <- function(id) {
     ns <- NS(id)
