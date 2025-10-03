@@ -79,7 +79,7 @@ To help you try the app quickly, example files are included in `example_data/`.
 
 ## Contributing
 
-Contributions are welcome! Report bugs or suggest features via [GitHub Issues](https://github.com/natanast/Seq2Viz/issues)
+Contributions are welcome! Report bugs or suggest features via [GitHub Issues](https://github.com/natanast/Seq2Viz/issues).
 
 ## License
 
