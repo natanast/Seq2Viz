@@ -50,14 +50,10 @@ server <- function(input, output, session) {
     # returns a list of reactive datasets
     data_list <- callModule(uploadServer, "upload1")
     
-    
     callModule(volcanoServer, "volcano", data_list$deseq)
-    
     
     callModule(pcaServer, "pca", data_list$metadata, data_list$counts, data_list$deseq)
     
-    
-    # Heatmap: PASS the reactives from data_list (NOT 'reactive_meta' etc)
     heatmapServer(
         "heat1",
         meta_data   = data_list$metadata,
