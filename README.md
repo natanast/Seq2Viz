@@ -1,9 +1,3 @@
----
-editor_options: 
-  markdown: 
-    wrap: 72
----
-
 # Seq2Viz
 
 **Seq2Viz** is a Shiny application for quick visualization of RNA-seq
@@ -72,8 +66,8 @@ unsupervised).
 
 **Current coverage**
 
-\- ✅ PCA Plot\
-- ✅ Volcano Plot\
+- ✅ PCA Plot
+- ✅ Volcano Plot
 - ✅ Heatmap
 
 ## Contributing
