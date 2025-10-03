@@ -18,8 +18,8 @@ This app requires several R packages. You can install them as follows:
 ### CRAN packages
 
 ``` r
-install.packages(c( "shiny", "bslib", "shinyWidgets", "data.table", "readxl",       
-  "stringr", "ggplot2", "ggrepel", "colorspace", "shadowtext", "ggplotify"     
+install.packages(c( "shiny", "bslib", "shinyWidgets", "data.table", "readxl", "stringr", "ggplot2", "ggrepel",
+  "colorspace", "shadowtext", "ggplotify"     
 ))
 ```
 
