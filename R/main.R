@@ -7,6 +7,9 @@ source("home.R")
 source("heatmap.R")
 
 
+# Allow uploads up to 100 MB
+options(shiny.maxRequestSize = 100*1024^2)
+
 ui <- navbarPage(
     
     title = "Seq2Viz",

@@ -35,7 +35,7 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
         }
         
         # --- filter significant genes ---
-        sig_results <- deseq[which((padj <= 0.05) & abs(log2FoldChange) >= 2)]
+        sig_results <- deseq[which((padj <= 0.05) & abs(log2FoldChange) >= 1)]
         sig_genes   <- sig_results$Geneid
         counts <- counts[gene_name %in% sig_genes]
 
@@ -131,8 +131,11 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
         
         # make sure named; if not, set names
         if (is.null(names(prop_var))) names(prop_var) <- paste0("PC", seq_along(prop_var))
-        x_lab <- paste0(xpc, " (", round(100 * (prop_var[[xpc]] %||% 0), 2), "%)")
-        y_lab <- paste0(ypc, " (", round(100 * (prop_var[[ypc]] %||% 0), 2), "%)")
+        # x_lab <- paste0(xpc, " (", round(100 * (prop_var[[xpc]] %||% 0), 2), "%)")
+        # y_lab <- paste0(ypc, " (", round(100 * (prop_var[[ypc]] %||% 0), 2), "%)")
+                 
+        x_lab <- paste0(xpc, " (", round(prop_var[1] * 100, 2), "%)")
+        y_lab <- paste0(ypc, " (", round(prop_var[2] * 100, 2), "%)")
         
         label_col <- if ("patientID" %in% colnames(pca_dt)) "patientID" else "sampleID"
         

@@ -1,25 +1,3 @@
-# 
-# 
-# uploadUI <- function(id) {
-#     ns <- NS(id)
-#     sidebarLayout(
-#         sidebarPanel(
-#             fileInput(ns("deseq_file"), "Upload DESeq2 results (.xlsx, .csv, .tsv)"),
-#             fileInput(ns("metadata_file"), "Upload Sample Metadata (.xlsx, .csv, .tsv)"),
-#             fileInput(ns("counts_file"), "Upload Counts (.txt, .csv, .tsv)")
-#         ),
-#         mainPanel(
-#             h4("DESeq2 Results Preview"),
-#             tableOutput(ns("deseq_preview")),
-#             hr(),
-#             h4("Sample Metadata Preview"),
-#             tableOutput(ns("metadata_preview")),
-#             hr(),
-#             h4("Counts Preview"),
-#             tableOutput(ns("counts_preview"))
-#         )
-#     )
-# }
 
 uploadUI <- function(id) {
     ns <- NS(id)
@@ -72,7 +50,7 @@ uploadServer <- function(input, output, session) {
     output$metadata_preview <- renderTable({ head(metadata_data(), 10) })
     output$counts_preview <- renderTable({ head(counts_data(), 10) })
     
-    # Return a list of the three reactives
+    # Return a list of the three reactive
     list(
         deseq = deseq_data,
         metadata = metadata_data,
