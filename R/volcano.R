@@ -24,7 +24,7 @@ volcanoServer <- function(input, output, session, deseq_data) {
         
         req(df)
         req(all(c("log2FoldChange", "Geneid") %in% colnames(df)))
-        req(any(c("padj", "pvalue") %in% colnames(df)))  # must have one
+        req(any(c("padj", "pvalue") %in% colnames(df)))  
         
         logfc_cutoff <- input$logfc_cutoff
         p_cutoff <- input$p_cutoff
