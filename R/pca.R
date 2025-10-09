@@ -73,7 +73,7 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
         selectInput(
             ns("group_col"), "Select grouping variable",
             choices = setdiff(meta_cols, "sampleID"),
-            selected = if ("Group1" %in% meta_cols) "Group1" else setdiff(meta_cols, "sampleID")[1]
+            selected = if ("Group" %in% meta_cols) "Group" else setdiff(meta_cols, "sampleID")[1]
         )
     })
     

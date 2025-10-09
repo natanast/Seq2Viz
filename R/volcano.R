@@ -99,7 +99,7 @@ volcanoServer <- function(input, output, session, deseq_data) {
             paste0("volcano_plot_", Sys.Date(), ".png")
         },
         content = function(file) {
-            ggsave(file, plot = volcano_plot(), width = 10, height = 10, dpi = 300)
+            ggsave(file, plot = volcano_plot(), width = 12, height = 10, dpi = 300)
         }
     )
 }

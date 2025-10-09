@@ -50,7 +50,6 @@ ui <- navbarPage(
 
 server <- function(input, output, session) {
     
-    # returns a list of reactive datasets
     data_list <- callModule(uploadServer, "upload1")
     
     callModule(volcanoServer, "volcano", data_list$deseq)

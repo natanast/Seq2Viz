@@ -25,7 +25,7 @@ homeUI <- function(id) {
                     tags$ul(
                         tags$li(HTML("<b>DESeq2 results file:</b> must contain <code>Geneid</code>, <code>pvalue</code>, and <code>padj</code> columns."), style = "color:#386375;"),
                         tags$li(HTML("<b>Gene counts file:</b> must contain a <code>gene_name</code> column."), style = "color:#386375;"),
-                        tags$li(HTML("<b>Sample metadata file:</b> must contain <code>sampleID</code>, <code>patientID</code>, and <code>Group1</code> columns."), style = "color:#386375;")
+                        tags$li(HTML("<b>Sample metadata file:</b> must contain <code>sampleID</code>, <code>patientID</code>, and <code>Group</code> columns."), style = "color:#386375;")
                     ),
                     h5("Then navigate through the app features as follows:", style = "color:#386375; margin-top:0rem; margin-bottom:0rem;"),
                     tags$ol(

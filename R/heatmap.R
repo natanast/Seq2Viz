@@ -85,17 +85,17 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
             sample_cols <- setdiff(colnames(counts_sub), "gene_name")
             ann <- meta[Sample %in% sample_cols]
             
-            # For supervised, ensure Group1 exists and set factor levels like your script
+            # For supervised, ensure Group exists and set factor levels like your script
             if (input$mode == "supervised") {
-                if (!("Group1" %in% colnames(ann))) stop("Supervised mode requires 'Group1' column in metadata.")
+                if (!("Group" %in% colnames(ann))) stop("Supervised mode requires 'Group' column in metadata.")
                 # enforce factor levels if both known
-                if (all(c("control", "ibrutinib") %in% unique(as.character(ann$Group1)))) {
-                    ann$Group1 <- factor(ann$Group1, levels = c("control", "ibrutinib"))
+                if (all(c("control", "ibrutinib") %in% unique(as.character(ann$Group)))) {
+                    ann$Group <- factor(ann$Group, levels = c("control", "ibrutinib"))
                 } else {
-                    ann$Group1 <- as.factor(ann$Group1)
+                    ann$Group <- as.factor(ann$Group)
                 }
                 # order samples by Group
-                ann <- ann[order(ann$Group1)]
+                ann <- ann[order(ann$Group)]
             } else {
                 # Unsupervised: keep metadata ordering as-is (or by Sample)
                 ann <- ann[order(ann$Sample)]
@@ -134,30 +134,30 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
             my_col <- colorRamp2(breaks = c(-4, -2, 0, 2, 4),
                                  colors = c('#00429d', '#73a2c6', 'grey96', '#f4777f', '#93003a'))
             
-            # Build the top annotation only if Group1 exists
+            # Build the top annotation only if Group exists
             ha <- NULL
-            if ("Group1" %in% colnames(ann)) {
-                uniq <- unique(as.character(ann$Group1))
+            if ("Group" %in% colnames(ann)) {
+                uniq <- unique(as.character(ann$Group))
                 base_palette <- c("control" = "#3a5cbc", "ibrutinib" = "#a62a17")
                 pal <- setNames(
                     ifelse(uniq %in% names(base_palette), base_palette[uniq],
                            grDevices::colorRampPalette(c("#00429d", "#73a2c6", "#f4777f", "#93003a"))(length(uniq))),
                     uniq
                 )
-                ha <- HeatmapAnnotation(Group1 = ann$Group1, col = list(Group1 = pal),
-                                        annotation_legend_param = list(title = "Group1"))
+                ha <- HeatmapAnnotation(Group = ann$Group, col = list(Group = pal),
+                                        annotation_legend_param = list(title = "Group"))
             }
             
 
             if (input$mode == "supervised") {
-                column_split_val <- ann$Group1
+                column_split_val <- ann$Group
                 cluster_columns_flag <- FALSE
                 top_ann <- ha
             } else {
                 # Unsupervised: split columns by numeric value if input$col_split >1, else cluster all together
                 column_split_val <- as.integer(input$col_split)
                 cluster_columns_flag <- TRUE
-                # KEEP the annotation so Group1 shows at the top
+                # KEEP the annotation so Group shows at the top
                 top_ann <- ha
             }
             
@@ -200,20 +200,29 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
             })
         }, res = 96)
         
+
         output$download_heatmap <- downloadHandler(
             filename = function() paste0("heatmap_", Sys.Date(), ".png"),
             content = function(file) {
                 ht <- build_heatmap(); req(ht)
-                prep <- heatmap_prep()
-                nr <- nrow(prep$mat); nc <- ncol(prep$mat)
-                png_w <- min(4000, max(1200, nc * 40))
-                png_h <- min(4000, max(1200, nr * 6))
-                png(filename = file, width = png_w, height = png_h, res = 300)
-                tryCatch({
-                    ComplexHeatmap::draw(ht, merge_legend = TRUE)
-                }, finally = dev.off())
+                
+                # Draw and capture as ggplot
+                gr <- grid::grid.grabExpr({
+                    ComplexHeatmap::draw(ht, merge_legends = TRUE)
+                }) |> ggplotify::as.ggplot()
+                
+                # Save with fixed size and dpi (wide, high-quality)
+                ggplot2::ggsave(
+                    filename = file,
+                    plot = gr,
+                    width = 10, height = 10,
+                    units = "in",
+                    dpi = 600
+                )
             }
         )
+        
+        
         
     })
 }
