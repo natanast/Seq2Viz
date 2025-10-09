@@ -22,7 +22,7 @@ heatmapUI <- function(id) {
                 conditionalPanel(condition = sprintf("input['%s'] == 'unsupervised'", ns("mode")),
                                  numericInput(ns("col_split"), "column_split (numeric)", value = 2, min = 1, step = 1)
                 ),
-                numericInput(ns("row_split"), "row_split (default 2)", value = 2, min = 1, step = 1),
+                numericInput(ns("row_split"), "Row split", value = 2, min = 1, step = 1),
                 hr(),
                 downloadButton(ns("download_heatmap"), "Download Heatmap (PNG)")
             ),
