@@ -19,8 +19,7 @@ This app requires several R packages. You can install them as follows:
 
 ``` r
 install.packages(c( "shiny", "bslib", "shinyWidgets", "data.table", "readxl", "stringr", "ggplot2", "ggrepel", "colorspace",
-  "shadowtext", "ggplotify"     
-))
+  "shadowtext", "ggplotify"))
 ```
 
 ### Bioconductor packages
