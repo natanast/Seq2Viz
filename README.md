@@ -62,11 +62,11 @@ To help you try the app quickly, example files are included in `example_data/`.
 
 **Files**
 
-\- `example_data/deseq2_treatment_vs_control.xlsx` — DESeq2 results
+- `example_data/deseq2_treatment_vs_control.xlsx` — DESeq2 results
 
-\- `example_data/gene_counts_deseq2_normalized.txt` — normalized counts
+- `example_data/gene_counts_deseq2_normalized.txt` — normalized counts
 
- - `example_data/sample_metadata.xlsx` — sample annotations
+- `example_data/sample_metadata.xlsx` — sample annotations
 
 **How to try**
 
