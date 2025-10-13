@@ -36,6 +36,8 @@ homeUI <- function(id) {
                         # tags$li("ORA analysis: Run over-representation analysis.", style = "color:#386375;")
                     ),
                     h6("Tip: Hover over plots for detailed information. Adjust cutoffs and settings to filter results.", style = "color:#386375;"),
+                    h6(HTML("For detailed instructions of the app, please see the <a href='https://github.com/natanast/Seq2Viz'>README</a>."), 
+                       style = "color:#386375;"),
                     style = "margin-bottom: 1rem; border-radius: 1rem; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); padding: 1rem;"
                 ),
                 
