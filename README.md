@@ -11,6 +11,12 @@ Clone this repository:
 git clone https://github.com/natanast/Seq2Viz.git
 ```
 
+## R Version Requirement
+
+Seq2Viz was developed and tested using **R version 4.5.1**.  
+To ensure full compatibility, the app requires **R version 4.5.1 or higher**.  
+If you are using an older version, please update R before installing the required packages.
+
 ## Required Packages
 
 This app requires several R packages. You can install them as follows:
