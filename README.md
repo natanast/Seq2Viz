@@ -59,8 +59,7 @@ To use Seq2Viz, provide the following datasets:
 
 1.  Upload your datasets under the **`Upload files`** tab.
 2.  Explore sample clustering and relationships in the **`PCA Plot`** tab.
-3.  Visualize differential expression in the **`Volcano Plot`** and **`Heatmap`** tabs. .
-4.  Explore pathway enrichment with the **`ORA`** and **`GSEA`** tabs.
+3.  Visualize differential expression in the **`Volcano Plot`** and **`Heatmap`** tabs.
 
 ## Test Data
 
