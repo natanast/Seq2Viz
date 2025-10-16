@@ -94,15 +94,21 @@ Below are example plots generated using the provided dataset:
 
 #### PCA Plot
 
-![PCA](images/PCA_plot.png){width="629"}*Principal Component Analysis (PCA) showing clustering of samples based on expression profiles.*
+<img src="images/PCA_plot.png" width="800px">
+
+*Principal Component Analysis (PCA) showing clustering of samples based on expression profiles.*
 
 #### Volcano Plot
 
-![Volcano](images/volcano_plot.png){width="629"}*Volcano plot illustrating differential gene expression.*
+<img src="images/volcano_plot.png" width="800px">
+
+*Volcano plot illustrating differential gene expression.*
 
 #### Heatmap
 
-![Heatmap](images/heatmap.png){width="629"} *Heatmap of top differentially expressed genes, highlighting expression patterns across conditions.*
+<img src="images/heatmap.png" width="800px">
+
+*Heatmap of top differentially expressed genes, highlighting expression patterns across conditions.*
 
 ## Contributing
 
