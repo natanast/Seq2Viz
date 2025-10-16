@@ -61,9 +61,10 @@ To use Seq2Viz, provide the following datasets:
 2.  Explore sample clustering and relationships in the **`PCA Plot`** tab.
 3.  Visualize differential expression in the **`Volcano Plot`** and **`Heatmap`** tabs.
 
-## Test Data
+## Example Data & Output
 
-To help you try the app quickly, example files are included in `example_data/`.
+The app includes **example data** to help you explore its features and understand the workflow.\
+The files are available in the `example_data/` folder of the repository.
 
 **Files**
 
@@ -71,7 +72,7 @@ To help you try the app quickly, example files are included in `example_data/`.
 
 -   `example_data/gene_counts_deseq2_normalized.txt` — normalized counts
 
--   `example_data/sample_metadata.xlsx` — sample annotations
+-   `example_data/sample_metadata.xlsx` — sample metadata
 
 **How to try**
 
@@ -86,6 +87,22 @@ To help you try the app quickly, example files are included in `example_data/`.
 -   ✅ PCA Plot
 -   ✅ Volcano Plot
 -   ✅ Heatmap
+
+**Example Output**
+
+Below are example plots generated using the provided dataset:
+
+#### PCA Plot
+
+![PCA](images/PCA_plot.png)*Principal Component Analysis (PCA) showing clustering of samples based on expression profiles.*
+
+#### Volcano Plot
+
+![Volcano](images/volcano_plot.png)*Volcano plot illustrating differential gene expression.*
+
+#### Heatmap
+
+![Heatmap](images/heatmap.png) *Heatmap of top differentially expressed genes, highlighting expression patterns across conditions.*
 
 ## Contributing
 
