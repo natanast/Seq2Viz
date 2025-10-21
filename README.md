@@ -92,23 +92,20 @@ The files are available in the `example_data/` folder of the repository.
 
 Below are example plots generated using the provided dataset:
 
-#### PCA Plot
+#### Principal Component Analysis (PCA) Plot
 
 <img src="images/PCA_plot.png" width="800px">
 
-*Principal Component Analysis (PCA) showing clustering of samples based on expression profiles.*
 
 #### Volcano Plot
 
 <img src="images/volcano_plot.png" width="800px">
 
-*Volcano plot illustrating differential gene expression.*
 
 #### Heatmap
 
 <img src="images/heatmap.png" width="800px">
 
-*Heatmap of top differentially expressed genes, highlighting expression patterns across conditions.*
 
 ## Contributing
 
