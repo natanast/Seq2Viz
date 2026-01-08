@@ -102,9 +102,12 @@ Below are example plots generated using the provided dataset:
 <img src="images/volcano_plot.png" width="800px">
 
 
-#### Heatmap
+#### Supervised Heatmap (padj)
 
-<img src="images/heatmap.png" width="800px">
+<img src="images/supervised_heatmap.png" width="800px">
+
+#### Unsupervised Heatmap (padj)
+<img src="images/unsupervised_heatmap.png" width="800px">
 
 
 ## Contributing
