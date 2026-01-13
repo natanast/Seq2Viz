@@ -39,6 +39,14 @@ BiocManager::install(c("ComplexHeatmap","circlize"))
 
 ## Usage
 
+1. Set the working directory to your Seq2Viz folder
+
+``` r
+setwd("path/to/your/Seq2Viz")
+```
+
+2. Run the app
+   
 ``` r
 library(shiny)
 runApp("R/main.R")
