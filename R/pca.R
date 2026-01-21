@@ -146,18 +146,27 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
         list(pca_dt = pca_dt, pca = pca)
     })
     
-    # 5. Plotting
+    # # 5. Plotting
     plot_pca <- reactive({
         res <- pca_results()
         pca_dt <- res$pca_dt
         pca <- res$pca
+        
+        # --- FIX START: Wait for the group column to exist ---
+        req(input$group_col)
         group_col <- input$group_col
+        
+        # Safety check: ensure the column is actually in the data
+        validate(need(group_col %in% colnames(pca_dt), 
+                      paste0("Column '", group_col, "' not found in metadata.")))
+        # --- FIX END ---
         
         xpc <- req(if (!is.null(input$x_pc)) input$x_pc else "PC1")
         ypc <- req(if (!is.null(input$y_pc)) input$y_pc else "PC2")
         
-        # Calculate variance explained (based on the full PCA)
+        # Calculate variance explained
         prop_var <- summary(pca)$importance[2, ]
+        if (is.null(names(prop_var))) names(prop_var) <- paste0("PC", seq_along(prop_var))
         
         idx_x <- as.integer(sub("^PC", "", xpc))
         idx_y <- as.integer(sub("^PC", "", ypc))
@@ -174,7 +183,6 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
         groups <- groups[!is.na(groups)]
         n_groups <- length(groups)
         
-        # Dynamic colors (keeps app flexible for any number of groups)
         base_fill_colors <- c("#990000", "#004d99")
         base_color_colors <- c("#990000", "#004d99")
         
@@ -213,6 +221,7 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
         
         p
     })
+    
     
     output$pca_plot <- renderPlot({
         plot_pca()
