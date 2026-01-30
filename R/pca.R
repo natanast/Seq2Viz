@@ -1,12 +1,13 @@
 
 pcaUI <- function(id) {
+    
     ns <- NS(id)
     
     sidebarLayout(
+        
         sidebarPanel(
             uiOutput(ns("group")),
             
-            # filtering controls (as you added previously)
             radioButtons(
                 ns("filter_column"), "Filter DE genes by:",
                 choices = c("padj" = "padj", "pvalue" = "pvalue"),
@@ -17,8 +18,7 @@ pcaUI <- function(id) {
             
             # label controls
             checkboxInput(ns("show_labels"), "Show sample labels", value = TRUE),
-            uiOutput(ns("label_col")),   # dynamically populated selectInput for label column
-            
+            uiOutput(ns("label_col")),
             uiOutput(ns("axis")),
             
             downloadButton(ns("download_plot"), "Download Plot")
@@ -43,6 +43,7 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
     
     # 2. Data Preparation
     data_list <- reactive({
+        
         req(meta_data(), counts_data(), deseq_data())
         meta <- meta_data()
         counts <- counts_data()
@@ -67,10 +68,12 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
         counts_filtered <- if (length(gene_ids) == 0) counts[0, ] else counts[ gene_name %in% gene_ids ]
         
         list(meta = meta, counts = counts_filtered)
+        
     })
     
     # 3. UI Updates
     output$group <- renderUI({
+        
         req(data_list())
         meta_cols <- names(data_list()$meta)
         selectInput(
@@ -78,16 +81,20 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
             choices = setdiff(meta_cols, "sampleID"),
             selected = if ("Group" %in% meta_cols) "Group" else setdiff(meta_cols, "sampleID")[1]
         )
+        
     })
     
     output$label_col <- renderUI({
+        
         req(data_list())
         meta_cols <- names(data_list()$meta)
         default <- if ("patientID" %in% meta_cols) "patientID" else if ("sampleID" %in% meta_cols) "sampleID" else meta_cols[1]
         selectInput(ns("label_col"), "Label column", choices = meta_cols, selected = default)
+        
     })
     
     output$axis <- renderUI({
+        
         res_ok <- tryCatch({ pca_results(); TRUE }, error = function(e) FALSE)
         pcs <- NULL
         if (res_ok) {
@@ -106,10 +113,12 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
             numericInput(ns("y_min"), "Y min", value = -50),
             numericInput(ns("y_max"), "Y max", value =  50)
         )
+        
     })
     
-    # 4. PCA Calculation (THE FIX IS HERE)
+    # 4. PCA Calculation 
     pca_results <- reactive({
+        
         data <- data_list()
         meta <- data$meta
         counts <- data$counts
@@ -125,14 +134,12 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
         rownames(count_values) <- gene_names
         counts_mat <- t(count_values) # samples as rows, genes as columns
         
-        # --- Run PCA on ALL samples (Matches script: filtered_counts_df) ---
-        # The script runs PCA *before* filtering by metadata
+        # --- Run PCA on ALL samples ---
         pca <- prcomp(counts_mat, center = TRUE, scale. = TRUE)
         
         # Extract PCA coordinates
         pca_dt <- as.data.table(pca$x, keep.rownames = "sampleID")
         
-        # --- NOW Filter by Metadata (Matches script: df = df[which(sampleID %in% ...)]) ---
         # Check intersection
         common_samples <- intersect(pca_dt$sampleID, meta$sampleID)
         validate(need(length(common_samples) > 0, "No matching sample names between counts and metadata."))
@@ -144,22 +151,24 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
         pca_dt <- merge(pca_dt, meta, by = "sampleID", all.x = TRUE)
         
         list(pca_dt = pca_dt, pca = pca)
+        
     })
     
-    # # 5. Plotting
+    # 5. Plotting
     plot_pca <- reactive({
+        
         res <- pca_results()
         pca_dt <- res$pca_dt
         pca <- res$pca
         
-        # --- FIX START: Wait for the group column to exist ---
+       
         req(input$group_col)
         group_col <- input$group_col
         
         # Safety check: ensure the column is actually in the data
         validate(need(group_col %in% colnames(pca_dt), 
                       paste0("Column '", group_col, "' not found in metadata.")))
-        # --- FIX END ---
+        
         
         xpc <- req(if (!is.null(input$x_pc)) input$x_pc else "PC1")
         ypc <- req(if (!is.null(input$y_pc)) input$y_pc else "PC2")
@@ -212,11 +221,14 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
             ) +
             labs(x = x_lab, y = y_lab)
         
-        if (isTRUE(input$show_labels)) {
+        if ( isTRUE(input$show_labels) ) {
+            
             if (!(label_col %in% colnames(pca_dt))) label_col <- "sampleID"
-            p <- p + ggrepel::geom_text_repel(aes_string(label = label_col),
-                                              fontface = "bold", size = 3,
-                                              bg.color = "white", bg.r = 0.05)
+            p <- p + geom_text_repel(
+                aes_string(label = label_col),
+                fontface = "bold", size = 3,
+                bg.color = "white", bg.r = 0.05
+            )
         }
         
         p
@@ -224,16 +236,21 @@ pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data
     
     
     output$pca_plot <- renderPlot({
+        
         plot_pca()
+        
     })
     
     output$download_plot <- downloadHandler(
+        
         filename = function() {
             paste0("PCA_plot_", Sys.Date(), ".png")
         },
+        
         content = function(file) {
             ggsave(file, plot = plot_pca(), width = 10, height = 10, dpi = 300)
         }
+        
     )
 }
 

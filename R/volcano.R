@@ -1,7 +1,10 @@
 
 volcanoUI <- function(id) {
+    
     ns <- NS(id)
+    
     sidebarLayout(
+        
         sidebarPanel(
             numericInput(ns("logfc_cutoff"), "Log2FC cutoff", 1),
             selectInput(ns("p_metric"), "Significance metric:",
@@ -10,16 +13,20 @@ volcanoUI <- function(id) {
             numericInput(ns("p_cutoff"), "Cutoff", 0.05),
             downloadButton(ns("download_plot"), "Download Plot")
         ),
+        
         mainPanel(
             plotOutput(ns("volcano_plot"), height = "700px")
         )
+        
     )
+    
 }
 
 
 volcanoServer <- function(input, output, session, deseq_data) {
     
     volcano_plot <- reactive({
+        
         df <- deseq_data()
         
         req(df)
@@ -95,12 +102,15 @@ volcanoServer <- function(input, output, session, deseq_data) {
     output$volcano_plot <- renderPlot({ volcano_plot() })
     
     output$download_plot <- downloadHandler(
+        
         filename = function() {
             paste0("volcano_plot_", Sys.Date(), ".png")
         },
+        
         content = function(file) {
             ggsave(file, plot = volcano_plot(), width = 12, height = 10, dpi = 300)
         }
+        
     )
 }
 

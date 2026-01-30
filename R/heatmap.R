@@ -1,11 +1,17 @@
 
 
 heatmapUI <- function(id) {
+    
     ns <- NS(id)
+    
     tagList(
+        
         sidebarLayout(
+            
             sidebarPanel(
+                
                 h4("Data Parameters"),
+                
                 radioButtons(ns("mode"), "Mode:",
                              choices = c("Supervised (by Group)" = "supervised",
                                          "Unsupervised (cluster columns)" = "unsupervised"),
@@ -45,20 +51,26 @@ heatmapUI <- function(id) {
                 conditionalPanel(condition = sprintf("input['%s'] == 'unsupervised'", ns("mode")),
                                  numericInput(ns("col_split"), "Column Split", value = 2, min = 1, step = 1)
                 ),
+                
                 numericInput(ns("row_split"), "Row Split", value = 2, min = 1, step = 1),
                 
                 hr(),
+                
                 downloadButton(ns("download_heatmap"), "Download Heatmap (PNG)")
+                
             ),
+            
             mainPanel(
                 plotOutput(ns("heatmap_plot"), height = "800px")
             )
+            
         )
     )
 }
 
 
 heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
+    
     moduleServer(id, function(input, output, session) {
         
         # --- 1. Data Cleaning ---
@@ -204,24 +216,32 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
         
         # --- 4. Render & Download ---
         output$heatmap_plot <- renderPlot({
+            
             ht <- build_heatmap(); req(ht)
             grid::grid.newpage()
             ComplexHeatmap::draw(ht, merge_legend = TRUE)
+            
         }, res = 96)
         
         output$download_heatmap <- downloadHandler(
+            
             filename = function() paste0("heatmap_", Sys.Date(), ".png"),
+            
             content = function(file) {
                 set.seed(123)
                 ht <- build_heatmap()
                 gr <- grid::grid.grabExpr(ComplexHeatmap::draw(ht, merge_legends = TRUE)) |> ggplotify::as.ggplot()
                 ggsave(file, plot = gr, width = 10, height = 10, dpi = 600)
             }
+            
         )
         
         observe({
+            
             req(input$filter_column)
             updateNumericInput(session, "pval_thresh", label = if (input$filter_column == "pvalue") "p-value threshold" else "padj threshold")
+            
         })
+        
     })
 }
