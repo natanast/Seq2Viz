@@ -13,15 +13,15 @@ deUI <- function(id) {
                 choices = c("padj" = "padj", "pvalue" = "pvalue"),
                 selected = "padj"
             ),
-            numericInput(ns("pval_thresh"), "padj threshold", value = 0.05, min = 0, step = 0.01),
-            numericInput(ns("lfc_thresh"), "abs(log2FoldChange) threshold", value = 1, min = 0, step = 0.1),
+            # numericInput(ns("pval_thresh"), "padj threshold", value = 0.05, min = 0, step = 0.01),
+            # numericInput(ns("lfc_thresh"), "abs(log2FoldChange) threshold", value = 1, min = 0, step = 0.1)
             
             # label controls
-            checkboxInput(ns("show_labels"), "Show sample labels", value = TRUE),
-            uiOutput(ns("label_col")),
-            uiOutput(ns("axis")),
-            
-            downloadButton(ns("download_plot"), "Download Plot")
+            # checkboxInput(ns("show_labels"), "Show sample labels", value = TRUE),
+            # uiOutput(ns("label_col")),
+            # uiOutput(ns("axis")),
+            # 
+            # downloadButton(ns("download_plot"), "Download Plot")
         ),
         
         mainPanel(
