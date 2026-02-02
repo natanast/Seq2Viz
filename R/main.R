@@ -1,6 +1,7 @@
 
 source("libraries.R")
 source("upload.R")
+source("de.R")
 source("volcano.R")
 source("pca.R")   
 source("home.R")
@@ -24,27 +25,34 @@ ui <- navbarPage(
     ),
 
 
-
     tabPanel(
         "Home",
         homeUI("home1")
     ),
     
-    
-    tabPanel("Upload files",
-             uploadUI("upload1")
+    tabPanel(
+        "Upload files",
+         uploadUI("upload1")
     ),
     
-    tabPanel("PCA Plot",
-             pcaUI("pca")
+    tabPanel(
+        "Deferential exprassion",
+        deUI("de")
     ),
     
-    tabPanel("Volcano Plot",
-             volcanoUI("volcano")
+    tabPanel(
+        "PCA Plot",
+         pcaUI("pca")
+    ),
+    
+    tabPanel(
+        "Volcano Plot",
+         volcanoUI("volcano")
     ),
 
-    tabPanel("Heatmap",
-             heatmapUI("heat1")
+    tabPanel(
+        "Heatmap",
+         heatmapUI("heat1")
     )
 )
 
@@ -53,6 +61,8 @@ ui <- navbarPage(
 server <- function(input, output, session) {
     
     data_list <- callModule(uploadServer, "upload1")
+    
+    # callModule(deserver, "de")
     
     callModule(volcanoServer, "volcano", data_list$deseq)
     
