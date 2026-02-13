@@ -116,14 +116,14 @@ server <- function(input, output, session) {
     volcanoServer("volcano", deseq_data = final_deseq)
 
 
-    heatmapServer(
-            "heat1",
-            meta_data   = final_meta,
-            counts_data = final_counts,
-            deseq_data  = final_deseq
-        )
+    # heatmapServer(
+    #         "heat1",
+    #         meta_data   = final_meta,
+    #         counts_data = final_counts,
+    #         deseq_data  = final_deseq
+    #     )
 
-    
+    heatmapServer("heat1", meta_data = final_meta, counts_data = final_counts, deseq_data = final_deseq)
 }
 
 shinyApp(ui, server)
