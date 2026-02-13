@@ -16,3 +16,9 @@ library(circlize)
 library(colorRamp2)
 library(ggplotify)
 library(ggforce)
+
+
+library(DESeq2)
+library(DT)
+library(shinycssloaders)
+library(ashr) 

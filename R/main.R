@@ -111,7 +111,9 @@ server <- function(input, output, session) {
               deseq_data = final_deseq)
     
     
-    callModule(volcanoServer, "volcano", final_deseq)
+    # callModule(volcanoServer, "volcano", final_deseq)
+    
+    volcanoServer("volcano", deseq_data = final_deseq)
 
 
     heatmapServer(
@@ -148,6 +150,3 @@ shinyApp(ui, server)
 #     # 
 #     
 # }
-
-
-shinyApp(ui, server)

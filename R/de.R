@@ -1,9 +1,4 @@
-library(shiny)
-library(DESeq2)
-library(DT)
-library(shinycssloaders)
-library(ggplot2)
-library(ashr) 
+
 
 deUI <- function(id) {
     ns <- NS(id)
