@@ -1,256 +1,1000 @@
+library(shiny)
+library(ggplot2)
+library(data.table)
+library(ggrepel)
+library(ggforce) 
+library(colorspace)
+library(shinycssloaders)
 
 pcaUI <- function(id) {
-    
     ns <- NS(id)
-    
     sidebarLayout(
-        
         sidebarPanel(
             uiOutput(ns("group")),
             
-            radioButtons(
-                ns("filter_column"), "Filter DE genes by:",
-                choices = c("padj" = "padj", "pvalue" = "pvalue"),
-                selected = "padj"
-            ),
+            radioButtons(ns("filter_column"), "Filter DE genes by:",
+                         choices = c("padj" = "padj", "pvalue" = "pvalue"),
+                         selected = "padj"),
+            
             numericInput(ns("pval_thresh"), "padj threshold", value = 0.05, min = 0, step = 0.01),
             numericInput(ns("lfc_thresh"), "abs(log2FoldChange) threshold", value = 1, min = 0, step = 0.1),
             
-            # label controls
             checkboxInput(ns("show_labels"), "Show sample labels", value = TRUE),
             uiOutput(ns("label_col")),
             uiOutput(ns("axis")),
             
             downloadButton(ns("download_plot"), "Download Plot")
         ),
-        
         mainPanel(
-            plotOutput(ns("pca_plot"), height = "700px")
+            # I added this Error Box so you can see IF something is wrong
+            verbatimTextOutput(ns("error_message")), 
+            withSpinner(plotOutput(ns("pca_plot"), height = "700px"))
         )
     )
 }
 
-pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data) {
-    
-    ns <- session$ns
-    
-    # 1. Update numeric inputs labels
-    observe({
-        req(input$filter_column)
-        new_label <- if (input$filter_column == "padj") "padj threshold" else "p-value threshold"
-        updateNumericInput(session, "pval_thresh", label = new_label)
-    })
-    
-    # 2. Data Preparation
-    data_list <- reactive({
+pcaServer <- function(id, meta_data, counts_data, deseq_data) {
+    moduleServer(id, function(input, output, session) {
         
-        req(meta_data(), counts_data(), deseq_data())
-        meta <- meta_data()
-        counts <- counts_data()
-        deseq <- deseq_data()
+        ns <- session$ns
         
-        # Tolerant renaming for counts gene id col
-        if ("Geneid" %in% colnames(counts) && !"gene_name" %in% colnames(counts)) setnames(counts, "Geneid", "gene_name")
-        if ("gene_id" %in% colnames(counts) && !"gene_name" %in% colnames(counts)) setnames(counts, "gene_id", "gene_name")
+        # 1. Update labels
+        observe({
+            req(input$filter_column)
+            new_label <- if (input$filter_column == "padj") "padj threshold" else "p-value threshold"
+            updateNumericInput(session, "pval_thresh", label = new_label)
+        })
         
-        # Filtering Genes (Matches your script's logic)
-        filter_col <- req(input$filter_column)
-        pth <- req(input$pval_thresh)
-        lfc_cut <- req(input$lfc_thresh)
-        
-        if (!(filter_col %in% colnames(deseq))) stop(sprintf("DE table does not contain column '%s'.", filter_col))
-        if (!("log2FoldChange" %in% colnames(deseq))) stop("DE table must contain 'log2FoldChange' column.")
-        
-        d_sig <- deseq[ which( get(filter_col) <= pth & abs(log2FoldChange) >= lfc_cut ) ]
-        gene_ids <- unique(d_sig$GeneID %||% d_sig$Geneid %||% d_sig$gene_id)
-        
-        # Filter Counts by GENE only (Keep ALL samples for now, just like the script)
-        counts_filtered <- if (length(gene_ids) == 0) counts[0, ] else counts[ gene_name %in% gene_ids ]
-        
-        list(meta = meta, counts = counts_filtered)
-        
-    })
-    
-    # 3. UI Updates
-    output$group <- renderUI({
-        
-        req(data_list())
-        meta_cols <- names(data_list()$meta)
-        selectInput(
-            ns("group_col"), "Select grouping variable",
-            choices = setdiff(meta_cols, "sampleID"),
-            selected = if ("Group" %in% meta_cols) "Group" else setdiff(meta_cols, "sampleID")[1]
-        )
-        
-    })
-    
-    output$label_col <- renderUI({
-        
-        req(data_list())
-        meta_cols <- names(data_list()$meta)
-        default <- if ("patientID" %in% meta_cols) "patientID" else if ("sampleID" %in% meta_cols) "sampleID" else meta_cols[1]
-        selectInput(ns("label_col"), "Label column", choices = meta_cols, selected = default)
-        
-    })
-    
-    output$axis <- renderUI({
-        
-        res_ok <- tryCatch({ pca_results(); TRUE }, error = function(e) FALSE)
-        pcs <- NULL
-        if (res_ok) {
-            res <- pca_results()
-            req(res)
-            # Only show PCs that actually exist in the result
-            pcs <- colnames(res$pca$x)
-        }
-        if (is.null(pcs) || length(pcs) == 0) pcs <- c("PC1", "PC2", "PC3", "PC4")
-        
-        tagList(
-            selectInput(ns("x_pc"), "X axis (PC)", choices = pcs, selected = if ("PC1" %in% pcs) "PC1" else pcs[1]),
-            selectInput(ns("y_pc"), "Y axis (PC)", choices = pcs, selected = if ("PC2" %in% pcs) "PC2" else pcs[min(2, length(pcs))]),
-            numericInput(ns("x_min"), "X min", value = -50),
-            numericInput(ns("x_max"), "X max", value =  50),
-            numericInput(ns("y_min"), "Y min", value = -50),
-            numericInput(ns("y_max"), "Y max", value =  50)
-        )
-        
-    })
-    
-    # 4. PCA Calculation 
-    pca_results <- reactive({
-        
-        data <- data_list()
-        meta <- data$meta
-        counts <- data$counts
-        
-        validate(need(nrow(counts) > 0, "No genes passed the selected significance filters. Relax thresholds."))
-        
-        # --- Prepare Matrix for PCA ---
-        gene_names <- counts$gene_name
-        sample_cols <- setdiff(colnames(counts), "gene_name")
-        
-        # Create matrix of ALL samples in the counts file
-        count_values <- as.matrix(counts[, sample_cols, with = FALSE])
-        rownames(count_values) <- gene_names
-        counts_mat <- t(count_values) # samples as rows, genes as columns
-        
-        # --- Run PCA on ALL samples ---
-        pca <- prcomp(counts_mat, center = TRUE, scale. = TRUE)
-        
-        # Extract PCA coordinates
-        pca_dt <- as.data.table(pca$x, keep.rownames = "sampleID")
-        
-        # Check intersection
-        common_samples <- intersect(pca_dt$sampleID, meta$sampleID)
-        validate(need(length(common_samples) > 0, "No matching sample names between counts and metadata."))
-        
-        # Filter the RESULT of the PCA, not the INPUT
-        pca_dt <- pca_dt[sampleID %in% common_samples]
-        
-        # Merge with metadata
-        pca_dt <- merge(pca_dt, meta, by = "sampleID", all.x = TRUE)
-        
-        list(pca_dt = pca_dt, pca = pca)
-        
-    })
-    
-    # 5. Plotting
-    plot_pca <- reactive({
-        
-        res <- pca_results()
-        pca_dt <- res$pca_dt
-        pca <- res$pca
-        
-       
-        req(input$group_col)
-        group_col <- input$group_col
-        
-        # Safety check: ensure the column is actually in the data
-        validate(need(group_col %in% colnames(pca_dt), 
-                      paste0("Column '", group_col, "' not found in metadata.")))
-        
-        
-        xpc <- req(if (!is.null(input$x_pc)) input$x_pc else "PC1")
-        ypc <- req(if (!is.null(input$y_pc)) input$y_pc else "PC2")
-        
-        # Calculate variance explained
-        prop_var <- summary(pca)$importance[2, ]
-        if (is.null(names(prop_var))) names(prop_var) <- paste0("PC", seq_along(prop_var))
-        
-        idx_x <- as.integer(sub("^PC", "", xpc))
-        idx_y <- as.integer(sub("^PC", "", ypc))
-        
-        pc_x_pct <- if (!is.na(idx_x) && idx_x <= length(prop_var)) prop_var[idx_x] else NA
-        pc_y_pct <- if (!is.na(idx_y) && idx_y <= length(prop_var)) prop_var[idx_y] else NA
-        
-        x_lab <- if (!is.na(pc_x_pct)) paste0(xpc, " (", round(pc_x_pct * 100, 2), "%)") else xpc
-        y_lab <- if (!is.na(pc_y_pct)) paste0(ypc, " (", round(pc_y_pct * 100, 2), "%)") else ypc
-        
-        label_col <- if (!is.null(input$label_col)) input$label_col else (if ("patientID" %in% colnames(pca_dt)) "patientID" else "sampleID")
-        
-        groups <- unique(pca_dt[[group_col]])
-        groups <- groups[!is.na(groups)]
-        n_groups <- length(groups)
-        
-        base_fill_colors <- c("#990000", "#004d99")
-        base_color_colors <- c("#990000", "#004d99")
-        
-        pal_fill <- colorspace::lighten(grDevices::colorRampPalette(base_fill_colors)(max(1, n_groups)), amount = 0.25)
-        pal_color <- colorspace::darken(grDevices::colorRampPalette(base_color_colors)(max(1, n_groups)), amount = 0.25)
-        
-        names(pal_fill) <- groups
-        names(pal_color) <- groups
-        
-        x_limits <- c(input$x_min, input$x_max)
-        y_limits <- c(input$y_min, input$y_max)
-        
-        p <- ggplot(pca_dt, aes_string(x = xpc, y = ypc, fill = group_col, color = group_col)) +
-            ggforce::geom_mark_circle(alpha = 0.10, expand = unit(1.5, "mm")) +
-            geom_point(shape = 21, size = 3, stroke = 0.25) +
-            scale_fill_manual(values = pal_fill, na.value = "grey") +
-            scale_color_manual(values = pal_color, na.value = "grey") +
-            scale_x_continuous(limits = x_limits) +
-            scale_y_continuous(limits = y_limits) +
-            theme_minimal() +
-            theme(
-                legend.position = "bottom",
-                panel.grid = element_blank(),
-                axis.line = element_line(lineend = "round"),
-                axis.ticks = element_line(lineend = "round"),
-                plot.margin = margin(20, 20, 20, 20)
-            ) +
-            labs(x = x_lab, y = y_lab)
-        
-        if ( isTRUE(input$show_labels) ) {
+        # 2. Data Preparation
+        data_list <- reactive({
+            req(meta_data(), counts_data(), deseq_data())
             
-            if (!(label_col %in% colnames(pca_dt))) label_col <- "sampleID"
-            p <- p + geom_text_repel(
-                aes_string(label = label_col),
-                fontface = "bold", size = 3,
-                bg.color = "white", bg.r = 0.05
+            meta <- copy(meta_data())
+            counts <- copy(counts_data())
+            deseq <- copy(deseq_data())
+            
+            # --- ROBUST FIX 1: Find Gene Column in Counts ---
+            # If we don't find "gene_name", we try other names, or just take the 1st column
+            if (!"gene_name" %in% colnames(counts)) {
+                candidates <- c("Geneid", "gene_id", "id", "ID", "Gene", "gene", "Symbol", "symbol")
+                found <- intersect(colnames(counts), candidates)
+                if (length(found) > 0) {
+                    setnames(counts, found[1], "gene_name")
+                } else {
+                    # Fallback: Assume the 1st column is the ID
+                    setnames(counts, colnames(counts)[1], "gene_name")
+                }
+            }
+            
+            # --- ROBUST FIX 2: Validate DESeq Columns ---
+            filter_col <- input$filter_column
+            if (!filter_col %in% colnames(deseq)) {
+                return(list(error = paste0("Error: Your DESeq file is missing the column '", filter_col, "'.")))
+            }
+            if (!"log2FoldChange" %in% colnames(deseq)) {
+                # Try to fix it if it's named "logFC"
+                if("logFC" %in% colnames(deseq)) {
+                    setnames(deseq, "logFC", "log2FoldChange")
+                } else {
+                    return(list(error = "Error: Your DESeq file is missing 'log2FoldChange' column."))
+                }
+            }
+            
+            pth <- req(input$pval_thresh)
+            lfc_cut <- req(input$lfc_thresh)
+            
+            # Filter DESeq results
+            d_sig <- deseq[ which( get(filter_col) <= pth & abs(log2FoldChange) >= lfc_cut ) ]
+            
+            # --- ROBUST FIX 3: Find ID in DESeq to match Counts ---
+            # We need to know which column in DESeq contains the Gene IDs
+            de_id_col <- "gene_name"
+            if(!"gene_name" %in% colnames(d_sig)) {
+                # Look for candidates
+                candidates <- c("GeneID", "Geneid", "gene_id", "id", "ID", "row", "Row.names")
+                found <- intersect(colnames(d_sig), candidates)
+                if(length(found) > 0) de_id_col <- found[1] else de_id_col <- colnames(d_sig)[1]
+            }
+            
+            gene_ids <- unique(d_sig[[de_id_col]])
+            
+            if (length(gene_ids) == 0) {
+                return(list(error = "No significant genes found. Try relaxing the thresholds."))
+            }
+            
+            # Filter Counts 
+            counts_filtered <- counts[ gene_name %in% gene_ids ]
+            
+            if(nrow(counts_filtered) == 0) {
+                return(list(error = paste0("Error: IDs don't match.\nDESeq IDs (col: ", de_id_col, ")\nCounts IDs (col: gene_name)")))
+            }
+            
+            list(meta = meta, counts = counts_filtered)
+        })
+        
+        # 3. UI Updates
+        output$group <- renderUI({
+            d <- data_list()
+            if(!is.null(d$error)) return(NULL)
+            meta_cols <- names(d$meta)
+            selectInput(
+                ns("group_col"), "Select grouping variable",
+                choices = setdiff(meta_cols, c("sampleID", "Sample", "id", "name")),
+                selected = if ("Group" %in% meta_cols) "Group" else meta_cols[2]
             )
-        }
+        })
         
-        p
+        output$label_col <- renderUI({
+            d <- data_list()
+            if(!is.null(d$error)) return(NULL)
+            meta_cols <- names(d$meta)
+            default <- if ("patientID" %in% meta_cols) "patientID" else if ("sampleID" %in% meta_cols) "sampleID" else meta_cols[1]
+            selectInput(ns("label_col"), "Label column", choices = meta_cols, selected = default)
+        })
+        
+        output$axis <- renderUI({
+            res_ok <- tryCatch({ !is.null(pca_results()) }, error = function(e) FALSE)
+            pcs <- NULL
+            if (res_ok) {
+                res <- pca_results()
+                if(!is.null(res)) pcs <- colnames(res$pca$x)
+            }
+            if (is.null(pcs) || length(pcs) == 0) pcs <- c("PC1", "PC2", "PC3", "PC4")
+            
+            tagList(
+                selectInput(ns("x_pc"), "X axis (PC)", choices = pcs, selected = if ("PC1" %in% pcs) "PC1" else pcs[1]),
+                selectInput(ns("y_pc"), "Y axis (PC)", choices = pcs, selected = if ("PC2" %in% pcs) "PC2" else pcs[min(2, length(pcs))]),
+                numericInput(ns("x_min"), "X min", value = -50),
+                numericInput(ns("x_max"), "X max", value =  50),
+                numericInput(ns("y_min"), "Y min", value = -50),
+                numericInput(ns("y_max"), "Y max", value =  50)
+            )
+        })
+        
+        # 4. PCA Calculation
+        pca_results <- reactive({
+            d <- data_list()
+            if(!is.null(d$error)) return(NULL)
+            
+            meta <- d$meta
+            counts <- d$counts
+            
+            gene_names <- counts$gene_name
+            sample_cols <- setdiff(colnames(counts), "gene_name")
+            
+            # Matrix Prep
+            count_values <- as.matrix(counts[, sample_cols, with = FALSE])
+            rownames(count_values) <- gene_names
+            counts_mat <- t(count_values)
+            
+            # Remove zero variance
+            counts_mat <- counts_mat[, apply(counts_mat, 2, var) != 0]
+            
+            # Run PCA
+            pca <- prcomp(counts_mat, center = TRUE, scale. = TRUE)
+            pca_dt <- as.data.table(pca$x, keep.rownames = "sampleID")
+            
+            # Merge Metadata (Robust ID match)
+            meta_samp_col <- "sampleID"
+            if(!"sampleID" %in% colnames(meta)) {
+                candidates <- c("Sample", "SampleID", "id", "ID", "name", "Name")
+                found <- intersect(colnames(meta), candidates)
+                if(length(found)>0) meta_samp_col <- found[1] else meta_samp_col <- colnames(meta)[1]
+            }
+            
+            common_samples <- intersect(pca_dt$sampleID, meta[[meta_samp_col]])
+            validate(need(length(common_samples) > 0, "No matching sample names between counts and metadata."))
+            
+            pca_dt <- pca_dt[sampleID %in% common_samples]
+            pca_dt <- merge(pca_dt, meta, by.x = "sampleID", by.y = meta_samp_col, all.x = TRUE)
+            
+            list(pca_dt = pca_dt, pca = pca)
+        })
+        
+        # 5. Plotting (YOUR EXACT STYLING)
+        plot_pca <- reactive({
+            req(pca_results(), input$group_col, input$x_pc, input$y_pc)
+            
+            res <- pca_results()
+            pca_dt <- res$pca_dt
+            pca <- res$pca
+            group_col <- input$group_col
+            
+            validate(need(group_col %in% colnames(pca_dt), paste0("Column '", group_col, "' not found.")))
+            
+            xpc <- input$x_pc
+            ypc <- input$y_pc
+            
+            prop_var <- summary(pca)$importance[2, ]
+            if (is.null(names(prop_var))) names(prop_var) <- paste0("PC", seq_along(prop_var))
+            
+            idx_x <- as.integer(sub("^PC", "", xpc))
+            idx_y <- as.integer(sub("^PC", "", ypc))
+            
+            pc_x_pct <- if (!is.na(idx_x) && idx_x <= length(prop_var)) prop_var[idx_x] else NA
+            pc_y_pct <- if (!is.na(idx_y) && idx_y <= length(prop_var)) prop_var[idx_y] else NA
+            
+            x_lab <- if (!is.na(pc_x_pct)) paste0(xpc, " (", round(pc_x_pct * 100, 2), "%)") else xpc
+            y_lab <- if (!is.na(pc_y_pct)) paste0(ypc, " (", round(pc_y_pct * 100, 2), "%)") else ypc
+            
+            label_col <- if (!is.null(input$label_col)) input$label_col else "sampleID"
+            if (!label_col %in% colnames(pca_dt)) label_col <- "sampleID"
+            
+            groups <- unique(pca_dt[[group_col]])
+            groups <- groups[!is.na(groups)]
+            n_groups <- length(groups)
+            
+            base_fill_colors <- c("#990000", "#004d99")
+            base_color_colors <- c("#990000", "#004d99")
+            pal_fill <- colorspace::lighten(grDevices::colorRampPalette(base_fill_colors)(max(1, n_groups)), amount = 0.25)
+            pal_color <- colorspace::darken(grDevices::colorRampPalette(base_color_colors)(max(1, n_groups)), amount = 0.25)
+            names(pal_fill) <- groups
+            names(pal_color) <- groups
+            
+            x_limits <- c(input$x_min, input$x_max)
+            y_limits <- c(input$y_min, input$y_max)
+            
+            p <- ggplot(pca_dt, aes_string(x = xpc, y = ypc, fill = group_col, color = group_col)) +
+                ggforce::geom_mark_circle(alpha = 0.10, expand = unit(1.5, "mm")) +
+                geom_point(shape = 21, size = 3, stroke = 0.25) +
+                scale_fill_manual(values = pal_fill, na.value = "grey") +
+                scale_color_manual(values = pal_color, na.value = "grey") +
+                scale_x_continuous(limits = x_limits) +
+                scale_y_continuous(limits = y_limits) +
+                theme_minimal() +
+                theme(
+                    legend.position = "bottom",
+                    panel.grid = element_blank(),
+                    axis.line = element_line(lineend = "round"),
+                    axis.ticks = element_line(lineend = "round"),
+                    plot.margin = margin(20, 20, 20, 20)
+                ) +
+                labs(x = x_lab, y = y_lab)
+            
+            if ( isTRUE(input$show_labels) ) {
+                p <- p + geom_text_repel(aes_string(label = label_col), fontface = "bold", size = 3, bg.color = "white", bg.r = 0.05)
+            }
+            p
+        })
+        
+        # Display Error Message if any
+        output$error_message <- renderText({
+            d <- data_list()
+            if(!is.null(d$error)) return(d$error)
+            return("")
+        })
+        
+        output$pca_plot <- renderPlot({ plot_pca() })
+        
+        output$download_plot <- downloadHandler(
+            filename = function() { paste0("PCA_plot_", Sys.Date(), ".png") },
+            content = function(file) { ggsave(file, plot = plot_pca(), width = 10, height = 10, dpi = 600) }
+        )
     })
-    
-    
-    output$pca_plot <- renderPlot({
-        
-        plot_pca()
-        
-    })
-    
-    output$download_plot <- downloadHandler(
-        
-        filename = function() {
-            paste0("PCA_plot_", Sys.Date(), ".png")
-        },
-        
-        content = function(file) {
-            ggsave(file, plot = plot_pca(), width = 10, height = 10, dpi = 300)
-        }
-        
-    )
 }
 
+
+
+# library(shiny)
+# library(ggplot2)
+# library(data.table)
+# library(ggrepel)
+# library(ggforce) 
+# library(colorspace)
+# library(shinycssloaders) # Added for spinner
+# 
+# pcaUI <- function(id) {
+#     ns <- NS(id)
+#     sidebarLayout(
+#         sidebarPanel(
+#             uiOutput(ns("group")),
+#             
+#             radioButtons(ns("filter_column"), "Filter DE genes by:",
+#                          choices = c("padj" = "padj", "pvalue" = "pvalue"),
+#                          selected = "padj"),
+#             
+#             numericInput(ns("pval_thresh"), "padj threshold", value = 0.05, min = 0, step = 0.01),
+#             numericInput(ns("lfc_thresh"), "abs(log2FoldChange) threshold", value = 1, min = 0, step = 0.1),
+#             
+#             # label controls
+#             checkboxInput(ns("show_labels"), "Show sample labels", value = TRUE),
+#             uiOutput(ns("label_col")),
+#             uiOutput(ns("axis")),
+#             
+#             downloadButton(ns("download_plot"), "Download Plot")
+#         ),
+#         mainPanel(
+#             # Using withSpinner is good practice for heavy plots
+#             withSpinner(plotOutput(ns("pca_plot"), height = "700px"))
+#         )
+#     )
+# }
+# 
+# pcaServer <- function(id, meta_data, counts_data, deseq_data) {
+#     moduleServer(id, function(input, output, session) {
+#         
+#         ns <- session$ns
+#         
+#         # 1. Update numeric inputs labels
+#         observe({
+#             req(input$filter_column)
+#             new_label <- if (input$filter_column == "padj") "padj threshold" else "p-value threshold"
+#             updateNumericInput(session, "pval_thresh", label = new_label)
+#         })
+#         
+#         # 2. Data Preparation
+#         data_list <- reactive({
+#             req(meta_data(), counts_data(), deseq_data())
+#             
+#             # Use copy() to prevent modifying the original reactive
+#             meta <- copy(meta_data())
+#             counts <- copy(counts_data())
+#             deseq <- copy(deseq_data())
+#             
+#             # Tolerant renaming for counts gene id col
+#             if ("Geneid" %in% colnames(counts) && !"gene_name" %in% colnames(counts)) setnames(counts, "Geneid", "gene_name")
+#             if ("gene_id" %in% colnames(counts) && !"gene_name" %in% colnames(counts)) setnames(counts, "gene_id", "gene_name")
+#             
+#             # Filtering Genes (Matches your script's logic)
+#             filter_col <- req(input$filter_column)
+#             pth <- req(input$pval_thresh)
+#             lfc_cut <- req(input$lfc_thresh)
+#             
+#             if (!(filter_col %in% colnames(deseq))) stop(sprintf("DE table does not contain column '%s'.", filter_col))
+#             if (!("log2FoldChange" %in% colnames(deseq))) stop("DE table must contain 'log2FoldChange' column.")
+#             
+#             d_sig <- deseq[ which( get(filter_col) <= pth & abs(log2FoldChange) >= lfc_cut ) ]
+#             gene_ids <- unique(d_sig$GeneID %||% d_sig$Geneid %||% d_sig$gene_id %||% d_sig$gene_name)
+#             
+#             # Filter Counts by GENE only (Keep ALL samples for now, just like the script)
+#             if (length(gene_ids) == 0) {
+#                 counts_filtered <- counts[0, ] 
+#             } else {
+#                 counts_filtered <- counts[ gene_name %in% gene_ids ]
+#             }
+#             
+#             list(meta = meta, counts = counts_filtered)
+#         })
+#         
+#         # 3. UI Updates
+#         output$group <- renderUI({
+#             req(data_list())
+#             meta_cols <- names(data_list()$meta)
+#             selectInput(
+#                 ns("group_col"), "Select grouping variable",
+#                 choices = setdiff(meta_cols, c("sampleID", "Sample", "id")),
+#                 selected = if ("Group" %in% meta_cols) "Group" else setdiff(meta_cols, c("sampleID", "Sample", "id"))[1]
+#             )
+#         })
+#         
+#         output$label_col <- renderUI({
+#             req(data_list())
+#             meta_cols <- names(data_list()$meta)
+#             default <- if ("patientID" %in% meta_cols) "patientID" else if ("sampleID" %in% meta_cols) "sampleID" else meta_cols[1]
+#             selectInput(ns("label_col"), "Label column", choices = meta_cols, selected = default)
+#         })
+#         
+#         output$axis <- renderUI({
+#             # Only try to get results if they exist to prevent UI flicker errors
+#             res_ok <- tryCatch({ !is.null(pca_results()) }, error = function(e) FALSE)
+#             pcs <- NULL
+#             if (res_ok) {
+#                 res <- pca_results()
+#                 if(!is.null(res)) pcs <- colnames(res$pca$x)
+#             }
+#             if (is.null(pcs) || length(pcs) == 0) pcs <- c("PC1", "PC2", "PC3", "PC4")
+#             
+#             tagList(
+#                 selectInput(ns("x_pc"), "X axis (PC)", choices = pcs, selected = if ("PC1" %in% pcs) "PC1" else pcs[1]),
+#                 selectInput(ns("y_pc"), "Y axis (PC)", choices = pcs, selected = if ("PC2" %in% pcs) "PC2" else pcs[min(2, length(pcs))]),
+#                 numericInput(ns("x_min"), "X min", value = -50),
+#                 numericInput(ns("x_max"), "X max", value =  50),
+#                 numericInput(ns("y_min"), "Y min", value = -50),
+#                 numericInput(ns("y_max"), "Y max", value =  50)
+#             )
+#         })
+#         
+#         # 4. PCA Calculation
+#         pca_results <- reactive({
+#             data <- data_list()
+#             meta <- data$meta
+#             counts <- data$counts
+#             
+#             validate(need(nrow(counts) > 0, "No genes passed the selected significance filters. Relax thresholds."))
+#             
+#             # --- Prepare Matrix for PCA ---
+#             gene_names <- counts$gene_name
+#             sample_cols <- setdiff(colnames(counts), "gene_name")
+#             
+#             # Create matrix of ALL samples in the counts file
+#             count_values <- as.matrix(counts[, sample_cols, with = FALSE])
+#             rownames(count_values) <- gene_names
+#             counts_mat <- t(count_values) # samples as rows, genes as columns
+#             
+#             # Remove zero variance columns (safety check)
+#             counts_mat <- counts_mat[, apply(counts_mat, 2, var) != 0]
+#             
+#             # --- Run PCA on ALL samples ---
+#             pca <- prcomp(counts_mat, center = TRUE, scale. = TRUE)
+#             
+#             # Extract PCA coordinates
+#             pca_dt <- as.data.table(pca$x, keep.rownames = "sampleID")
+#             
+#             # Check intersection
+#             # Flexible check for sample ID column in metadata
+#             meta_samp_col <- "sampleID"
+#             if(!"sampleID" %in% colnames(meta)) meta_samp_col <- colnames(meta)[1]
+#             
+#             common_samples <- intersect(pca_dt$sampleID, meta[[meta_samp_col]])
+#             validate(need(length(common_samples) > 0, "No matching sample names between counts and metadata."))
+#             
+#             # Filter the RESULT of the PCA, not the INPUT
+#             pca_dt <- pca_dt[sampleID %in% common_samples]
+#             
+#             # Merge with metadata
+#             pca_dt <- merge(pca_dt, meta, by.x = "sampleID", by.y = meta_samp_col, all.x = TRUE)
+#             
+#             list(pca_dt = pca_dt, pca = pca)
+#         })
+#         
+#         # 5. Plotting (YOUR EXACT STYLING CODE)
+#         plot_pca <- reactive({
+#             req(pca_results(), input$group_col, input$x_pc, input$y_pc)
+#             
+#             res <- pca_results()
+#             pca_dt <- res$pca_dt
+#             pca <- res$pca
+#             
+#             group_col <- input$group_col
+#             
+#             # Safety check: ensure the column is actually in the data
+#             validate(need(group_col %in% colnames(pca_dt),
+#                           paste0("Column '", group_col, "' not found in metadata.")))
+#             
+#             xpc <- input$x_pc
+#             ypc <- input$y_pc
+#             
+#             # Calculate variance explained
+#             prop_var <- summary(pca)$importance[2, ]
+#             if (is.null(names(prop_var))) names(prop_var) <- paste0("PC", seq_along(prop_var))
+#             
+#             idx_x <- as.integer(sub("^PC", "", xpc))
+#             idx_y <- as.integer(sub("^PC", "", ypc))
+#             
+#             pc_x_pct <- if (!is.na(idx_x) && idx_x <= length(prop_var)) prop_var[idx_x] else NA
+#             pc_y_pct <- if (!is.na(idx_y) && idx_y <= length(prop_var)) prop_var[idx_y] else NA
+#             
+#             x_lab <- if (!is.na(pc_x_pct)) paste0(xpc, " (", round(pc_x_pct * 100, 2), "%)") else xpc
+#             y_lab <- if (!is.na(pc_y_pct)) paste0(ypc, " (", round(pc_y_pct * 100, 2), "%)") else ypc
+#             
+#             # Handle Label Column
+#             label_col <- if (!is.null(input$label_col)) input$label_col else (if ("patientID" %in% colnames(pca_dt)) "patientID" else "sampleID")
+#             
+#             groups <- unique(pca_dt[[group_col]])
+#             groups <- groups[!is.na(groups)]
+#             n_groups <- length(groups)
+#             
+#             # YOUR CUSTOM COLORS
+#             base_fill_colors <- c("#990000", "#004d99")
+#             base_color_colors <- c("#990000", "#004d99")
+#             
+#             pal_fill <- colorspace::lighten(grDevices::colorRampPalette(base_fill_colors)(max(1, n_groups)), amount = 0.25)
+#             pal_color <- colorspace::darken(grDevices::colorRampPalette(base_color_colors)(max(1, n_groups)), amount = 0.25)
+#             
+#             names(pal_fill) <- groups
+#             names(pal_color) <- groups
+#             
+#             x_limits <- c(input$x_min, input$x_max)
+#             y_limits <- c(input$y_min, input$y_max)
+#             
+#             p <- ggplot(pca_dt, aes_string(x = xpc, y = ypc, fill = group_col, color = group_col)) +
+#                 ggforce::geom_mark_circle(alpha = 0.10, expand = unit(1.5, "mm")) +
+#                 geom_point(shape = 21, size = 3, stroke = 0.25) +
+#                 scale_fill_manual(values = pal_fill, na.value = "grey") +
+#                 scale_color_manual(values = pal_color, na.value = "grey") +
+#                 scale_x_continuous(limits = x_limits) +
+#                 scale_y_continuous(limits = y_limits) +
+#                 theme_minimal() +
+#                 theme(
+#                     legend.position = "bottom",
+#                     panel.grid = element_blank(),
+#                     axis.line = element_line(lineend = "round"),
+#                     axis.ticks = element_line(lineend = "round"),
+#                     plot.margin = margin(20, 20, 20, 20)
+#                 ) +
+#                 labs(x = x_lab, y = y_lab)
+#             
+#             if ( isTRUE(input$show_labels) ) {
+#                 if (!(label_col %in% colnames(pca_dt))) label_col <- "sampleID"
+#                 p <- p + geom_text_repel(
+#                     aes_string(label = label_col),
+#                     fontface = "bold", size = 3,
+#                     bg.color = "white", bg.r = 0.05
+#                 )
+#             }
+#             
+#             p
+#         })
+#         
+#         output$pca_plot <- renderPlot({
+#             plot_pca()
+#         })
+#         
+#         output$download_plot <- downloadHandler(
+#             filename = function() { paste0("PCA_plot_", Sys.Date(), ".png") },
+#             content = function(file) { ggsave(file, plot = plot_pca(), width = 10, height = 10, dpi = 600) }
+#         )
+#     })
+# }
+
+# pcaUI <- function(id) {
+#     ns <- NS(id)
+#     sidebarLayout(
+#         sidebarPanel(
+#             uiOutput(ns("group")),
+#             
+#             radioButtons(ns("filter_column"), "Filter DE genes by:",
+#                          choices = c("padj" = "padj", "pvalue" = "pvalue"),
+#                          selected = "padj"),
+#             
+#             numericInput(ns("pval_thresh"), "padj threshold", value = 0.05, min = 0, step = 0.01),
+#             numericInput(ns("lfc_thresh"), "abs(log2FoldChange) threshold", value = 1, min = 0, step = 0.1),
+#             
+#             checkboxInput(ns("show_labels"), "Show sample labels", value = TRUE),
+#             uiOutput(ns("label_col")),
+#             uiOutput(ns("axis")),
+#             
+#             downloadButton(ns("download_plot"), "Download Plot")
+#         ),
+#         mainPanel(
+#             # Using withSpinner is good practice for heavy plots
+#             shinycssloaders::withSpinner(plotOutput(ns("pca_plot"), height = "700px"))
+#         )
+#     )
+# }
+
+
+# pcaUI <- function(id) {
+# 
+#     ns <- NS(id)
+# 
+#     sidebarLayout(
+# 
+#         sidebarPanel(
+#             uiOutput(ns("group")),
+# 
+#             radioButtons(
+#                 ns("filter_column"), "Filter DE genes by:",
+#                 choices = c("padj" = "padj", "pvalue" = "pvalue"),
+#                 selected = "padj"
+#             ),
+#             numericInput(ns("pval_thresh"), "padj threshold", value = 0.05, min = 0, step = 0.01),
+#             numericInput(ns("lfc_thresh"), "abs(log2FoldChange) threshold", value = 1, min = 0, step = 0.1),
+# 
+#             # label controls
+#             checkboxInput(ns("show_labels"), "Show sample labels", value = TRUE),
+#             uiOutput(ns("label_col")),
+#             uiOutput(ns("axis")),
+# 
+#             downloadButton(ns("download_plot"), "Download Plot")
+#         ),
+# 
+#         mainPanel(
+#             plotOutput(ns("pca_plot"), height = "700px")
+#         )
+#     )
+# }
+# 
+# # Note: We now use 'id' as the first argument, matching modern Shiny modules
+# pcaServer <- function(id, meta_data, counts_data, deseq_data) {
+#     moduleServer(id, function(input, output, session) {
+#         
+#         ns <- session$ns
+#         
+#         # 1. Update labels dynamically
+#         observe({
+#             req(input$filter_column)
+#             new_label <- if (input$filter_column == "padj") "padj threshold" else "p-value threshold"
+#             updateNumericInput(session, "pval_thresh", label = new_label)
+#         })
+#         
+#         # 2. Data Preparation
+#         data_list <- reactive({
+#             req(meta_data(), counts_data(), deseq_data())
+#             
+#             # COPY data to prevent modifying the original reactive
+#             meta <- copy(meta_data())
+#             counts <- copy(counts_data())
+#             deseq <- copy(deseq_data())
+#             
+#             # Tolerant renaming for counts gene id col
+#             if ("Geneid" %in% colnames(counts) && !"gene_name" %in% colnames(counts)) setnames(counts, "Geneid", "gene_name")
+#             if ("gene_id" %in% colnames(counts) && !"gene_name" %in% colnames(counts)) setnames(counts, "gene_id", "gene_name")
+#             
+#             # Filtering Genes
+#             filter_col <- req(input$filter_column)
+#             pth <- req(input$pval_thresh)
+#             lfc_cut <- req(input$lfc_thresh)
+#             
+#             if (!(filter_col %in% colnames(deseq))) stop(sprintf("DE table missing column '%s'.", filter_col))
+#             if (!("log2FoldChange" %in% colnames(deseq))) stop("DE table missing 'log2FoldChange' column.")
+#             
+#             # Filter DESeq results
+#             d_sig <- deseq[ which( get(filter_col) <= pth & abs(log2FoldChange) >= lfc_cut ) ]
+#             
+#             # Get list of significant genes
+#             gene_ids <- unique(d_sig$GeneID %||% d_sig$Geneid %||% d_sig$gene_id %||% d_sig$gene_name)
+#             
+#             # Filter Counts (Keep only significant genes)
+#             if (length(gene_ids) == 0) {
+#                 counts_filtered <- counts[0,] 
+#             } else {
+#                 counts_filtered <- counts[ gene_name %in% gene_ids ]
+#             }
+#             
+#             list(meta = meta, counts = counts_filtered)
+#         })
+#         
+#         # 3. PCA Calculation
+#         pca_results <- reactive({
+#             data <- data_list()
+#             meta <- data$meta
+#             counts <- data$counts
+#             
+#             validate(need(nrow(counts) > 1, "No genes passed filters. Try relaxing thresholds."))
+#             
+#             # Prepare Matrix
+#             # Identify numeric columns (samples)
+#             gene_col <- "gene_name"
+#             sample_cols <- setdiff(colnames(counts), gene_col)
+#             
+#             # Ensure we only use numeric columns
+#             mat_data <- as.matrix(counts[, ..sample_cols])
+#             rownames(mat_data) <- counts[[gene_col]]
+#             
+#             # Transpose: Rows = Samples, Cols = Genes
+#             pca_mat <- t(mat_data) 
+#             
+#             # Remove zero variance columns (genes with constant expression)
+#             pca_mat <- pca_mat[, apply(pca_mat, 2, var) != 0]
+#             
+#             # Run PCA
+#             pca <- prcomp(pca_mat, center = TRUE, scale. = TRUE)
+#             
+#             # Extract coordinates
+#             pca_dt <- as.data.table(pca$x, keep.rownames = "sampleID")
+#             
+#             # Merge with Metadata
+#             # Find the metadata column that matches the sample names
+#             # We assume it's the first column of metadata usually, or specific name
+#             meta_samp_col <- "sampleID" 
+#             if(!"sampleID" %in% colnames(meta)) meta_samp_col <- colnames(meta)[1]
+#             
+#             # Merge
+#             pca_dt <- merge(pca_dt, meta, by.x = "sampleID", by.y = meta_samp_col, all.x = TRUE)
+#             
+#             list(pca_dt = pca_dt, pca = pca)
+#         })
+#         
+#         # 4. UI Outputs
+#         output$group <- renderUI({
+#             req(data_list())
+#             meta_cols <- names(data_list()$meta)
+#             selectInput(ns("group_col"), "Grouping Variable", 
+#                         choices = setdiff(meta_cols, c("sampleID", "Sample", "id")),
+#                         selected = meta_cols[2])
+#         })
+#         
+#         output$label_col <- renderUI({
+#             req(data_list())
+#             meta_cols <- names(data_list()$meta)
+#             selectInput(ns("label_col"), "Label Column", choices = meta_cols, selected = meta_cols[1])
+#         })
+#         
+#         output$axis <- renderUI({
+#             req(pca_results())
+#             pcs <- colnames(pca_results()$pca$x)
+#             tagList(
+#                 selectInput(ns("x_pc"), "X Axis", choices = pcs, selected = "PC1"),
+#                 selectInput(ns("y_pc"), "Y Axis", choices = pcs, selected = "PC2")
+#             )
+#         })
+#         
+#         # 5. Plotting
+#         plot_pca <- reactive({
+#             req(pca_results(), input$group_col, input$x_pc, input$y_pc)
+#             
+#             res <- pca_results()
+#             df <- res$pca_dt
+#             
+#             # Dynamic variance labels
+#             prop_var <- summary(res$pca)$importance[2, ]
+#             x_lab <- paste0(input$x_pc, " (", round(prop_var[input$x_pc] * 100, 2), "%)")
+#             y_lab <- paste0(input$y_pc, " (", round(prop_var[input$y_pc] * 100, 2), "%)")
+#             
+#             p <- ggplot(df, aes_string(x = input$x_pc, y = input$y_pc, 
+#                                        fill = input$group_col, color = input$group_col)) +
+#                 geom_point(shape = 21, size = 4, stroke = 1, alpha = 0.8) +
+#                 # Use ggforce for nice circles/hulls if available
+#                 ggforce::geom_mark_ellipse(aes_string(fill = input$group_col), alpha = 0.1, expand = unit(3, "mm")) +
+#                 theme_minimal(base_size = 14) +
+#                 labs(x = x_lab, y = y_lab, title = "PCA Plot") +
+#                 scale_color_brewer(palette = "Dark2") +
+#                 scale_fill_brewer(palette = "Dark2")
+#             
+#             if (isTRUE(input$show_labels) && !is.null(input$label_col)) {
+#                 p <- p + geom_text_repel(aes_string(label = input$label_col), 
+#                                          box.padding = 0.5, max.overlaps = 20, show.legend = FALSE, color = "black")
+#             }
+#             p
+#         })
+#         
+#         output$pca_plot <- renderPlot({
+#             plot_pca()
+#         })
+#         
+#         output$download_plot <- downloadHandler(
+#             filename = function() { paste0("PCA_plot_", Sys.Date(), ".png") },
+#             content = function(file) { ggsave(file, plot = plot_pca(), width = 10, height = 8, dpi = 300) }
+#         )
+#     })
+# }
+
+
+
+
+# pcaUI <- function(id) {
+#     
+#     ns <- NS(id)
+#     
+#     sidebarLayout(
+#         
+#         sidebarPanel(
+#             uiOutput(ns("group")),
+#             
+#             radioButtons(
+#                 ns("filter_column"), "Filter DE genes by:",
+#                 choices = c("padj" = "padj", "pvalue" = "pvalue"),
+#                 selected = "padj"
+#             ),
+#             numericInput(ns("pval_thresh"), "padj threshold", value = 0.05, min = 0, step = 0.01),
+#             numericInput(ns("lfc_thresh"), "abs(log2FoldChange) threshold", value = 1, min = 0, step = 0.1),
+#             
+#             # label controls
+#             checkboxInput(ns("show_labels"), "Show sample labels", value = TRUE),
+#             uiOutput(ns("label_col")),
+#             uiOutput(ns("axis")),
+#             
+#             downloadButton(ns("download_plot"), "Download Plot")
+#         ),
+#         
+#         mainPanel(
+#             plotOutput(ns("pca_plot"), height = "700px")
+#         )
+#     )
+# }
+# 
+# pcaServer <- function(input, output, session, meta_data, counts_data, deseq_data) {
+#     
+#     ns <- session$ns
+#     
+#     # 1. Update numeric inputs labels
+#     observe({
+#         req(input$filter_column)
+#         new_label <- if (input$filter_column == "padj") "padj threshold" else "p-value threshold"
+#         updateNumericInput(session, "pval_thresh", label = new_label)
+#     })
+#     
+#     # 2. Data Preparation
+#     data_list <- reactive({
+#         
+#         req(meta_data(), counts_data(), deseq_data())
+#         meta <- meta_data()
+#         counts <- counts_data()
+#         deseq <- deseq_data()
+#         
+#         # Tolerant renaming for counts gene id col
+#         if ("Geneid" %in% colnames(counts) && !"gene_name" %in% colnames(counts)) setnames(counts, "Geneid", "gene_name")
+#         if ("gene_id" %in% colnames(counts) && !"gene_name" %in% colnames(counts)) setnames(counts, "gene_id", "gene_name")
+#         
+#         # Filtering Genes (Matches your script's logic)
+#         filter_col <- req(input$filter_column)
+#         pth <- req(input$pval_thresh)
+#         lfc_cut <- req(input$lfc_thresh)
+#         
+#         if (!(filter_col %in% colnames(deseq))) stop(sprintf("DE table does not contain column '%s'.", filter_col))
+#         if (!("log2FoldChange" %in% colnames(deseq))) stop("DE table must contain 'log2FoldChange' column.")
+#         
+#         d_sig <- deseq[ which( get(filter_col) <= pth & abs(log2FoldChange) >= lfc_cut ) ]
+#         gene_ids <- unique(d_sig$GeneID %||% d_sig$Geneid %||% d_sig$gene_id)
+#         
+#         # Filter Counts by GENE only (Keep ALL samples for now, just like the script)
+#         counts_filtered <- if (length(gene_ids) == 0) counts[0, ] else counts[ gene_name %in% gene_ids ]
+#         
+#         list(meta = meta, counts = counts_filtered)
+#         
+#     })
+#     
+#     # 3. UI Updates
+#     output$group <- renderUI({
+#         
+#         req(data_list())
+#         meta_cols <- names(data_list()$meta)
+#         selectInput(
+#             ns("group_col"), "Select grouping variable",
+#             choices = setdiff(meta_cols, "sampleID"),
+#             selected = if ("Group" %in% meta_cols) "Group" else setdiff(meta_cols, "sampleID")[1]
+#         )
+#         
+#     })
+#     
+#     output$label_col <- renderUI({
+#         
+#         req(data_list())
+#         meta_cols <- names(data_list()$meta)
+#         default <- if ("patientID" %in% meta_cols) "patientID" else if ("sampleID" %in% meta_cols) "sampleID" else meta_cols[1]
+#         selectInput(ns("label_col"), "Label column", choices = meta_cols, selected = default)
+#         
+#     })
+#     
+#     output$axis <- renderUI({
+#         
+#         res_ok <- tryCatch({ pca_results(); TRUE }, error = function(e) FALSE)
+#         pcs <- NULL
+#         if (res_ok) {
+#             res <- pca_results()
+#             req(res)
+#             # Only show PCs that actually exist in the result
+#             pcs <- colnames(res$pca$x)
+#         }
+#         if (is.null(pcs) || length(pcs) == 0) pcs <- c("PC1", "PC2", "PC3", "PC4")
+#         
+#         tagList(
+#             selectInput(ns("x_pc"), "X axis (PC)", choices = pcs, selected = if ("PC1" %in% pcs) "PC1" else pcs[1]),
+#             selectInput(ns("y_pc"), "Y axis (PC)", choices = pcs, selected = if ("PC2" %in% pcs) "PC2" else pcs[min(2, length(pcs))]),
+#             numericInput(ns("x_min"), "X min", value = -50),
+#             numericInput(ns("x_max"), "X max", value =  50),
+#             numericInput(ns("y_min"), "Y min", value = -50),
+#             numericInput(ns("y_max"), "Y max", value =  50)
+#         )
+#         
+#     })
+#     
+#     # 4. PCA Calculation 
+#     pca_results <- reactive({
+#         
+#         data <- data_list()
+#         meta <- data$meta
+#         counts <- data$counts
+#         
+#         validate(need(nrow(counts) > 0, "No genes passed the selected significance filters. Relax thresholds."))
+#         
+#         # --- Prepare Matrix for PCA ---
+#         gene_names <- counts$gene_name
+#         sample_cols <- setdiff(colnames(counts), "gene_name")
+#         
+#         # Create matrix of ALL samples in the counts file
+#         count_values <- as.matrix(counts[, sample_cols, with = FALSE])
+#         rownames(count_values) <- gene_names
+#         counts_mat <- t(count_values) # samples as rows, genes as columns
+#         
+#         # --- Run PCA on ALL samples ---
+#         pca <- prcomp(counts_mat, center = TRUE, scale. = TRUE)
+#         
+#         # Extract PCA coordinates
+#         pca_dt <- as.data.table(pca$x, keep.rownames = "sampleID")
+#         
+#         # Check intersection
+#         common_samples <- intersect(pca_dt$sampleID, meta$sampleID)
+#         validate(need(length(common_samples) > 0, "No matching sample names between counts and metadata."))
+#         
+#         # Filter the RESULT of the PCA, not the INPUT
+#         pca_dt <- pca_dt[sampleID %in% common_samples]
+#         
+#         # Merge with metadata
+#         pca_dt <- merge(pca_dt, meta, by = "sampleID", all.x = TRUE)
+#         
+#         list(pca_dt = pca_dt, pca = pca)
+#         
+#     })
+#     
+#     # 5. Plotting
+#     plot_pca <- reactive({
+#         
+#         res <- pca_results()
+#         pca_dt <- res$pca_dt
+#         pca <- res$pca
+#         
+#        
+#         req(input$group_col)
+#         group_col <- input$group_col
+#         
+#         # Safety check: ensure the column is actually in the data
+#         validate(need(group_col %in% colnames(pca_dt), 
+#                       paste0("Column '", group_col, "' not found in metadata.")))
+#         
+#         
+#         xpc <- req(if (!is.null(input$x_pc)) input$x_pc else "PC1")
+#         ypc <- req(if (!is.null(input$y_pc)) input$y_pc else "PC2")
+#         
+#         # Calculate variance explained
+#         prop_var <- summary(pca)$importance[2, ]
+#         if (is.null(names(prop_var))) names(prop_var) <- paste0("PC", seq_along(prop_var))
+#         
+#         idx_x <- as.integer(sub("^PC", "", xpc))
+#         idx_y <- as.integer(sub("^PC", "", ypc))
+#         
+#         pc_x_pct <- if (!is.na(idx_x) && idx_x <= length(prop_var)) prop_var[idx_x] else NA
+#         pc_y_pct <- if (!is.na(idx_y) && idx_y <= length(prop_var)) prop_var[idx_y] else NA
+#         
+#         x_lab <- if (!is.na(pc_x_pct)) paste0(xpc, " (", round(pc_x_pct * 100, 2), "%)") else xpc
+#         y_lab <- if (!is.na(pc_y_pct)) paste0(ypc, " (", round(pc_y_pct * 100, 2), "%)") else ypc
+#         
+#         label_col <- if (!is.null(input$label_col)) input$label_col else (if ("patientID" %in% colnames(pca_dt)) "patientID" else "sampleID")
+#         
+#         groups <- unique(pca_dt[[group_col]])
+#         groups <- groups[!is.na(groups)]
+#         n_groups <- length(groups)
+#         
+#         base_fill_colors <- c("#990000", "#004d99")
+#         base_color_colors <- c("#990000", "#004d99")
+#         
+#         pal_fill <- colorspace::lighten(grDevices::colorRampPalette(base_fill_colors)(max(1, n_groups)), amount = 0.25)
+#         pal_color <- colorspace::darken(grDevices::colorRampPalette(base_color_colors)(max(1, n_groups)), amount = 0.25)
+#         
+#         names(pal_fill) <- groups
+#         names(pal_color) <- groups
+#         
+#         x_limits <- c(input$x_min, input$x_max)
+#         y_limits <- c(input$y_min, input$y_max)
+#         
+#         p <- ggplot(pca_dt, aes_string(x = xpc, y = ypc, fill = group_col, color = group_col)) +
+#             ggforce::geom_mark_circle(alpha = 0.10, expand = unit(1.5, "mm")) +
+#             geom_point(shape = 21, size = 3, stroke = 0.25) +
+#             scale_fill_manual(values = pal_fill, na.value = "grey") +
+#             scale_color_manual(values = pal_color, na.value = "grey") +
+#             scale_x_continuous(limits = x_limits) +
+#             scale_y_continuous(limits = y_limits) +
+#             theme_minimal() +
+#             theme(
+#                 legend.position = "bottom",
+#                 panel.grid = element_blank(),
+#                 axis.line = element_line(lineend = "round"),
+#                 axis.ticks = element_line(lineend = "round"),
+#                 plot.margin = margin(20, 20, 20, 20)
+#             ) +
+#             labs(x = x_lab, y = y_lab)
+#         
+#         if ( isTRUE(input$show_labels) ) {
+#             
+#             if (!(label_col %in% colnames(pca_dt))) label_col <- "sampleID"
+#             p <- p + geom_text_repel(
+#                 aes_string(label = label_col),
+#                 fontface = "bold", size = 3,
+#                 bg.color = "white", bg.r = 0.05
+#             )
+#         }
+#         
+#         p
+#     })
+#     
+#     
+#     output$pca_plot <- renderPlot({
+#         
+#         plot_pca()
+#         
+#     })
+#     
+#     output$download_plot <- downloadHandler(
+#         
+#         filename = function() {
+#             paste0("PCA_plot_", Sys.Date(), ".png")
+#         },
+#         
+#         content = function(file) {
+#             ggsave(file, plot = plot_pca(), width = 10, height = 10, dpi = 600)
+#         }
+#         
+#     )
+# }
+# 
