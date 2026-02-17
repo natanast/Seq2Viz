@@ -42,7 +42,7 @@ BiocManager::install(c("ComplexHeatmap","circlize"))
 1. Set the working directory to your Seq2Viz folder
 
 ``` r
-setwd("path/to/your/Seq2Viz")
+setwd("path_to_your_working_directory/Seq2Viz")
 ```
 
 2. Run the app
