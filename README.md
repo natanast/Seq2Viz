@@ -92,6 +92,7 @@ The files are available in the `example_data/` folder of the repository.
 
 **Current coverage**
 
+-   ✅ DESeq2 analysis
 -   ✅ PCA Plot
 -   ✅ Volcano Plot
 -   ✅ Heatmap
