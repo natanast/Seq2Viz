@@ -1,8 +1,4 @@
 
-library(shiny)
-library(data.table)
-library(readxl)
-library(tools)
 
 uploadUI <- function(id) {
     ns <- NS(id)

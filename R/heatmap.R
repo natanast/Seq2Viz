@@ -1,11 +1,4 @@
 
-library(shiny)
-library(ComplexHeatmap)
-library(circlize)
-library(data.table)
-library(ggplotify)
-library(shinycssloaders)
-
 heatmapUI <- function(id) {
     ns <- NS(id)
     tagList(

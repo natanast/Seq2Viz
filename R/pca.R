@@ -1,10 +1,4 @@
-library(shiny)
-library(ggplot2)
-library(data.table)
-library(ggrepel)
-library(ggforce)
-library(colorspace)
-library(shinycssloaders)
+
 
 pcaUI <- function(id) {
     ns <- NS(id)

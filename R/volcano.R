@@ -1,10 +1,4 @@
 
-library(shiny)
-library(ggplot2)
-library(data.table)
-library(ggrepel)
-library(colorspace)
-library(shinycssloaders)
 
 volcanoUI <- function(id) {
     ns <- NS(id)
