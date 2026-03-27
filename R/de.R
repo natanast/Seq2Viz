@@ -48,6 +48,36 @@ deUI <- function(id) {
 deserver <- function(id, counts_data, meta_data) {
     
     moduleServer(id, function(input, output, session) {
+
+        get_sample_col <- function(df) {
+            samp_col <- grep("sample|id", colnames(df), ignore.case = TRUE, value = TRUE)[1]
+            if (is.na(samp_col)) samp_col <- colnames(df)[1]
+            samp_col
+        }
+
+        subset_inputs <- reactive({
+            meta_df <- meta_data()
+            if (is.null(meta_df) ||
+                is.null(input$main_factor) ||
+                is.null(input$ref_level) ||
+                is.null(input$target_level) ||
+                identical(input$ref_level, input$target_level)) {
+                return(NULL)
+            }
+
+            meta <- copy(meta_df)
+            samp_col <- get_sample_col(meta)
+            keep_levels <- unique(c(input$ref_level, input$target_level))
+
+            subset_meta <- meta[meta[[input$main_factor]] %in% keep_levels, ]
+            subset_meta <- subset_meta[!is.na(subset_meta[[samp_col]]), ]
+
+            list(
+                sample_col = samp_col,
+                keep_levels = keep_levels,
+                meta = subset_meta
+            )
+        })
         
         output$design_controls <- renderUI({
             
@@ -78,7 +108,7 @@ deserver <- function(id, counts_data, meta_data) {
                 hr(),
                 h5("Contrast Definition"),
                 selectInput(ns("ref_level"), "Reference Level (Control):", choices = lvls, selected = lvls[1]),
-                selectInput(ns("target_level"), "Target Level (Treatment):", choices = lvls, selected = lvls[2])
+                selectInput(ns("target_level"), "Target Level (Treatment):", choices = lvls, selected = lvls[min(2, length(lvls))])
             )
             
         })
@@ -100,12 +130,12 @@ deserver <- function(id, counts_data, meta_data) {
             tryCatch({
                 
                 cts <- copy(counts_data())
-                meta <- copy(meta_data())
+                subset_info <- subset_inputs()
+                validate(need(!is.null(subset_info), "Choose two different groups for the comparison."))
+                meta <- copy(subset_info$meta)
                 
                 gene_col <- colnames(cts)[1] 
-                samp_col <- grep("sample|id", colnames(meta), ignore.case = TRUE, value = TRUE)[1]
-                
-                if(is.na(samp_col)) samp_col <- colnames(meta)[1]
+                samp_col <- subset_info$sample_col
                 
                 keep_cols <- c(gene_col, intersect(colnames(cts), meta[[samp_col]]))
                 
@@ -118,6 +148,11 @@ deserver <- function(id, counts_data, meta_data) {
                 
                 meta <- meta[meta[[samp_col]] %in% colnames(mm), ]
                 meta <- meta[match(colnames(mm), meta[[samp_col]]), ]
+
+                validate(
+                    need(nrow(meta) >= 2, "Need at least two samples in the selected comparison."),
+                    need(length(unique(meta[[input$main_factor]])) == 2, "Select two distinct groups for the comparison.")
+                )
                 
                 design_cols <- c(input$covariates, input$main_factor)
                 
@@ -193,20 +228,44 @@ deserver <- function(id, counts_data, meta_data) {
         
         
         # --- CRITICAL FIX IS HERE (Step 4) ---
-        return(reactive({
-            
-            # If the user has NOT clicked the button, return NULL immediately.
-            # This tells main.R: "I have no data, go check the uploads instead."
+        active_subset <- reactive({
+            subset_info <- subset_inputs()
+            if (is.null(subset_info) || is.null(counts_data())) return(NULL)
+
+            meta <- copy(subset_info$meta)
+            cts <- copy(counts_data())
+
+            gene_col <- colnames(cts)[1]
+            keep_sample_ids <- unique(as.character(meta[[subset_info$sample_col]]))
+            keep_cols <- c(gene_col, intersect(colnames(cts), keep_sample_ids))
+
+            if (length(keep_cols) <= 1) return(NULL)
+
+            cts <- cts[, ..keep_cols]
+            meta <- meta[match(setdiff(colnames(cts), gene_col), meta[[subset_info$sample_col]]), ]
+
+            list(
+                counts = cts,
+                meta = meta,
+                main_factor = input$main_factor,
+                ref_level = input$ref_level,
+                target_level = input$target_level
+            )
+        })
+
+        analysis_results <- reactive({
             if (input$run_btn == 0) return(NULL)
-            
-            # If button clicked, try to get results. 
-            # If analysis failed (returned NULL), we pass that NULL along.
+
             out <- analysis_out()
             if (is.null(out)) return(NULL)
-            
+
             list(res = out$res, counts = out$counts, meta = out$meta)
-            
-        }))
+        })
+
+        return(list(
+            results = analysis_results,
+            active_subset = active_subset
+        ))
         
     })
 }

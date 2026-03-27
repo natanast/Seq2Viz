@@ -64,29 +64,56 @@ server <- function(input, output, session) {
     data_list <- uploadServer("upload1")
     
     # 2. Run Analysis (Optional)
-    de_results <- deserver("de", counts_data = data_list$counts, meta_data = data_list$metadata)
+    de_state <- deserver("de", counts_data = data_list$counts, meta_data = data_list$metadata)
     
     # --- 3. THE SMART DATA SWITCH ---
     
+    filtered_counts <- reactive({
+        subset_info <- de_state$active_subset()
+        if (!is.null(subset_info) && !is.null(subset_info$counts)) {
+            return(subset_info$counts)
+        }
+        data_list$counts()
+    })
+
+    filtered_meta <- reactive({
+        subset_info <- de_state$active_subset()
+        if (!is.null(subset_info) && !is.null(subset_info$meta)) {
+            return(subset_info$meta)
+        }
+        data_list$metadata()
+    })
+
     final_counts <- reactive({
         # Case A: User ran the DE tab analysis? -> Use calculated normalized counts
-        if (!is.null(de_results()) && !is.null(de_results()$counts)) {
-            return(de_results()$counts)
+        if (!is.null(de_state$results()) && !is.null(de_state$results()$counts)) {
+            return(de_state$results()$counts)
         } 
         # Case B: User uploaded a Normalized Counts file? -> Use that
         else if (!is.null(data_list$norm_counts())) {
-            return(data_list$norm_counts())
+            norm_counts <- copy(data_list$norm_counts())
+            meta <- filtered_meta()
+
+            req(meta)
+
+            sample_col <- grep("sample|id", colnames(meta), ignore.case = TRUE, value = TRUE)[1]
+            if (is.na(sample_col)) sample_col <- colnames(meta)[1]
+
+            gene_col <- colnames(norm_counts)[1]
+            keep_cols <- c(gene_col, intersect(colnames(norm_counts), meta[[sample_col]]))
+
+            return(norm_counts[, ..keep_cols])
         }
         # Case C: Fallback to raw counts (Visuals might be un-normalized)
         else {
-            return(data_list$counts())
+            return(filtered_counts())
         }
     })
     
     final_deseq <- reactive({
         # Case A: User ran the DE tab analysis?
-        if (!is.null(de_results()) && !is.null(de_results()$res)) {
-            return(de_results()$res)
+        if (!is.null(de_state$results()) && !is.null(de_state$results()$res)) {
+            return(de_state$results()$res)
         }
         # Case B: User uploaded a DESeq results file?
         else {
@@ -96,12 +123,12 @@ server <- function(input, output, session) {
     
     final_meta <- reactive({
         # Case A: User ran DE tab (factors might be updated)
-        if (!is.null(de_results()) && !is.null(de_results()$meta)) {
-            return(de_results()$meta)
+        if (!is.null(de_state$results()) && !is.null(de_state$results()$meta)) {
+            return(de_state$results()$meta)
         } 
         # Case B: Use uploaded metadata
         else {
-            return(data_list$metadata())
+            return(filtered_meta())
         }
     })
 
