@@ -84,25 +84,53 @@ server <- function(input, output, session) {
         data_list$metadata()
     })
 
-    final_counts <- reactive({
+    subset_counts_to_meta <- function(counts_dt, meta_dt) {
+        if (is.null(counts_dt) || is.null(meta_dt)) return(counts_dt)
+
+        counts_dt <- copy(counts_dt)
+        meta_dt <- copy(meta_dt)
+
+        gene_candidates <- c("gene_name", "Geneid", "gene_id", "GeneID", "id", "ID", "gene", "Gene")
+        gene_col <- intersect(gene_candidates, colnames(counts_dt))[1]
+        if (is.na(gene_col)) gene_col <- colnames(counts_dt)[1]
+
+        sample_col <- grep("sample|id", colnames(meta_dt), ignore.case = TRUE, value = TRUE)[1]
+        if (is.na(sample_col)) sample_col <- colnames(meta_dt)[1]
+
+        keep_cols <- c(gene_col, intersect(colnames(counts_dt), meta_dt[[sample_col]]))
+
+        out <- counts_dt[, ..keep_cols]
+        if ("gene_name" %in% colnames(out)) {
+            setcolorder(out, c("gene_name", setdiff(colnames(out), "gene_name")))
+        } else if (gene_col %in% colnames(out) && gene_col != colnames(out)[1]) {
+            setcolorder(out, c(gene_col, setdiff(colnames(out), gene_col)))
+        }
+        out
+    }
+
+    pca_counts <- reactive({
         # Case A: User ran the DE tab analysis? -> Use calculated normalized counts
         if (!is.null(de_state$results()) && !is.null(de_state$results()$counts)) {
             return(de_state$results()$counts)
         } 
         # Case B: User uploaded a Normalized Counts file? -> Use that
         else if (!is.null(data_list$norm_counts())) {
-            norm_counts <- copy(data_list$norm_counts())
-            meta <- filtered_meta()
+            return(data_list$norm_counts())
+        }
+        # Case C: Fallback to raw counts (Visuals might be un-normalized)
+        else {
+            return(data_list$counts())
+        }
+    })
 
-            req(meta)
-
-            sample_col <- grep("sample|id", colnames(meta), ignore.case = TRUE, value = TRUE)[1]
-            if (is.na(sample_col)) sample_col <- colnames(meta)[1]
-
-            gene_col <- colnames(norm_counts)[1]
-            keep_cols <- c(gene_col, intersect(colnames(norm_counts), meta[[sample_col]]))
-
-            return(norm_counts[, ..keep_cols])
+    heatmap_counts <- reactive({
+        # Case A: User ran the DE tab analysis? -> Use calculated normalized counts
+        if (!is.null(de_state$results()) && !is.null(de_state$results()$counts)) {
+            return(subset_counts_to_meta(de_state$results()$counts, filtered_meta()))
+        } 
+        # Case B: User uploaded a Normalized Counts file? -> Use that
+        else if (!is.null(data_list$norm_counts())) {
+            return(subset_counts_to_meta(data_list$norm_counts(), filtered_meta()))
         }
         # Case C: Fallback to raw counts (Visuals might be un-normalized)
         else {
@@ -122,20 +150,13 @@ server <- function(input, output, session) {
     })
     
     final_meta <- reactive({
-        # Case A: User ran DE tab (factors might be updated)
-        if (!is.null(de_state$results()) && !is.null(de_state$results()$meta)) {
-            return(de_state$results()$meta)
-        } 
-        # Case B: Use uploaded metadata
-        else {
-            return(filtered_meta())
-        }
+        filtered_meta()
     })
 
     # 4. Run PCA with the chosen data
     pcaServer("pca", 
               meta_data = final_meta, 
-              counts_data = final_counts, 
+              counts_data = pca_counts, 
               deseq_data = final_deseq)
     
     
@@ -151,7 +172,7 @@ server <- function(input, output, session) {
     #         deseq_data  = final_deseq
     #     )
 
-    heatmapServer("heat1", meta_data = final_meta, counts_data = final_counts, deseq_data = final_deseq)
+    heatmapServer("heat1", meta_data = final_meta, counts_data = heatmap_counts, deseq_data = final_deseq)
 }
 
 shinyApp(ui, server)
