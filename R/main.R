@@ -67,9 +67,17 @@ server <- function(input, output, session) {
     de_state <- deserver("de", counts_data = data_list$counts, meta_data = data_list$metadata)
     
     # --- 3. THE SMART DATA SWITCH ---
+
+    active_subset <- reactive({
+        de_subset <- de_state$active_subset()
+        if (!is.null(de_subset)) {
+            return(de_subset)
+        }
+        data_list$external_subset()
+    })
     
     filtered_counts <- reactive({
-        subset_info <- de_state$active_subset()
+        subset_info <- active_subset()
         if (!is.null(subset_info) && !is.null(subset_info$counts)) {
             return(subset_info$counts)
         }
@@ -77,7 +85,7 @@ server <- function(input, output, session) {
     })
 
     filtered_meta <- reactive({
-        subset_info <- de_state$active_subset()
+        subset_info <- active_subset()
         if (!is.null(subset_info) && !is.null(subset_info$meta)) {
             return(subset_info$meta)
         }
@@ -155,7 +163,7 @@ server <- function(input, output, session) {
 
     heatmap_display_meta <- reactive({
         meta <- filtered_meta()
-        subset_info <- de_state$active_subset()
+        subset_info <- active_subset()
 
         if (is.null(meta) || is.null(subset_info)) {
             return(meta)

@@ -15,6 +15,7 @@ uploadUI <- function(id) {
             fileInput(ns("deseq_file"), "Upload DESeq2 Results (.xlsx, .csv)"),
             # --- ADDED THIS INPUT ---
             fileInput(ns("norm_counts_file"), "Upload Normalized Counts (.txt, .csv)"),
+            uiOutput(ns("external_filter_ui")),
             
             style = "border-radius: 1rem; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); padding: 1rem; background-color: #fff;"
         ),
@@ -32,6 +33,13 @@ uploadUI <- function(id) {
 
 uploadServer <- function(id) {
     moduleServer(id, function(input, output, session) {
+        ns <- session$ns
+
+        get_sample_col <- function(df) {
+            samp_col <- grep("sample|id", colnames(df), ignore.case = TRUE, value = TRUE)[1]
+            if (is.na(samp_col)) samp_col <- colnames(df)[1]
+            samp_col
+        }
         
         # Helper to read files
         read_file <- function(file_input) {
@@ -60,13 +68,89 @@ uploadServer <- function(id) {
         output$counts_preview   <- renderTable({ head(counts_data(), 5) })
         output$deseq_preview    <- renderTable({ head(deseq_data(), 5) })
         output$norm_preview     <- renderTable({ head(norm_data(), 5) })
+
+        output$external_filter_ui <- renderUI({
+            req(metadata_data())
+
+            has_external_inputs <- !is.null(deseq_data()) || !is.null(norm_data())
+            if (!isTRUE(has_external_inputs)) return(NULL)
+
+            df <- metadata_data()
+            cols <- colnames(df)
+            cols <- cols[!tolower(cols) %in% c("sample", "sampleid", "id", "name")]
+
+            tagList(
+                hr(),
+                h4("3. External Comparison Filter"),
+                p("If you uploaded DESeq2 results or normalized counts, choose which groups this comparison should display."),
+                selectInput(ns("external_main_factor"), "Grouping variable", choices = cols, selected = "Group"),
+                uiOutput(ns("external_contrast_ui"))
+            )
+        })
+
+        output$external_contrast_ui <- renderUI({
+            req(metadata_data(), input$external_main_factor)
+
+            has_external_inputs <- !is.null(deseq_data()) || !is.null(norm_data())
+            if (!isTRUE(has_external_inputs)) return(NULL)
+
+            df <- metadata_data()
+            lvls <- unique(as.character(df[[input$external_main_factor]]))
+
+            tagList(
+                selectInput(ns("external_ref_level"), "Reference Level (Control)", choices = lvls, selected = lvls[1]),
+                selectInput(ns("external_target_level"), "Target Level (Treatment)", choices = lvls, selected = lvls[min(2, length(lvls))])
+            )
+        })
+
+        external_subset <- reactive({
+            meta <- metadata_data()
+            if (is.null(meta) ||
+                is.null(input$external_main_factor) ||
+                is.null(input$external_ref_level) ||
+                is.null(input$external_target_level) ||
+                identical(input$external_ref_level, input$external_target_level)) {
+                return(NULL)
+            }
+
+            has_external_inputs <- !is.null(deseq_data()) || !is.null(norm_data())
+            if (!isTRUE(has_external_inputs)) return(NULL)
+
+            meta <- copy(meta)
+            sample_col <- get_sample_col(meta)
+            keep_levels <- unique(c(input$external_target_level, input$external_ref_level))
+            subset_meta <- meta[meta[[input$external_main_factor]] %in% keep_levels, ]
+            subset_meta <- subset_meta[!is.na(subset_meta[[sample_col]]), ]
+
+            raw_counts <- counts_data()
+            subset_counts <- NULL
+            if (!is.null(raw_counts)) {
+                raw_counts <- copy(raw_counts)
+                gene_col <- colnames(raw_counts)[1]
+                ordered_sample_ids <- unique(as.character(subset_meta[[sample_col]]))
+                ordered_sample_ids <- ordered_sample_ids[ordered_sample_ids %in% colnames(raw_counts)]
+                keep_cols <- c(gene_col, ordered_sample_ids)
+                if (length(keep_cols) > 1) {
+                    subset_counts <- raw_counts[, ..keep_cols]
+                }
+            }
+
+            list(
+                counts = subset_counts,
+                meta = subset_meta,
+                main_factor = input$external_main_factor,
+                ref_level = input$external_ref_level,
+                target_level = input$external_target_level
+            )
+        })
         
         # Return ALL data
         list(
             metadata = metadata_data,
             counts = counts_data,
             deseq = deseq_data,
-            norm_counts = norm_data # <--- Return this new file
+            norm_counts = norm_data,
+            external_subset = external_subset
         )
     })
 }
