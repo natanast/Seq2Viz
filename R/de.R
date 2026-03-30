@@ -130,12 +130,10 @@ deserver <- function(id, counts_data, meta_data) {
             tryCatch({
                 
                 cts <- copy(counts_data())
-                subset_info <- subset_inputs()
-                validate(need(!is.null(subset_info), "Choose two different groups for the comparison."))
-                meta <- copy(subset_info$meta)
+                meta <- copy(meta_data())
                 
                 gene_col <- colnames(cts)[1] 
-                samp_col <- subset_info$sample_col
+                samp_col <- get_sample_col(meta)
                 
                 keep_cols <- c(gene_col, intersect(colnames(cts), meta[[samp_col]]))
                 
@@ -150,8 +148,10 @@ deserver <- function(id, counts_data, meta_data) {
                 meta <- meta[match(colnames(mm), meta[[samp_col]]), ]
 
                 validate(
-                    need(nrow(meta) >= 2, "Need at least two samples in the selected comparison."),
-                    need(length(unique(meta[[input$main_factor]])) == 2, "Select two distinct groups for the comparison.")
+                    need(nrow(meta) >= 2, "Need at least two samples for DESeq2 analysis."),
+                    need(!identical(input$ref_level, input$target_level), "Choose two different groups for the comparison."),
+                    need(all(c(input$ref_level, input$target_level) %in% unique(as.character(meta[[input$main_factor]]))),
+                         "Selected contrast groups were not found in the matched metadata.")
                 )
                 
                 design_cols <- c(input$covariates, input$main_factor)
@@ -184,10 +184,12 @@ deserver <- function(id, counts_data, meta_data) {
                 res_df <- as.data.frame(res)
                 res_df$gene_name <- rownames(res_df)
                 res_dt <- as.data.table(res_df)
+                setcolorder(res_dt, c("gene_name", setdiff(colnames(res_dt), "gene_name")))
                 
                 norm_dt <- as.data.frame(norm_counts)
                 norm_dt$gene_name <- rownames(norm_dt)
                 norm_dt <- as.data.table(norm_dt)
+                setcolorder(norm_dt, c("gene_name", setdiff(colnames(norm_dt), "gene_name")))
                 
                 list(res = res_dt, counts = norm_dt, dds = dds, meta = meta)
                 
@@ -237,12 +239,12 @@ deserver <- function(id, counts_data, meta_data) {
 
             gene_col <- colnames(cts)[1]
             keep_sample_ids <- unique(as.character(meta[[subset_info$sample_col]]))
-            keep_cols <- c(gene_col, intersect(colnames(cts), keep_sample_ids))
+            ordered_sample_ids <- keep_sample_ids[keep_sample_ids %in% colnames(cts)]
+            keep_cols <- c(gene_col, ordered_sample_ids)
 
             if (length(keep_cols) <= 1) return(NULL)
 
             cts <- cts[, ..keep_cols]
-            meta <- meta[match(setdiff(colnames(cts), gene_col), meta[[subset_info$sample_col]]), ]
 
             list(
                 counts = cts,
