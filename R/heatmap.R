@@ -15,7 +15,7 @@ heatmapUI <- function(id) {
                 
                 numericInput(ns("pval_thresh"), "Significance Threshold", value = 0.05, min = 0, step = 0.01),
                 numericInput(ns("lfc_thresh"), "Log2FC Threshold (abs)", value = 1, min = 0, step = 0.1),
-                numericInput(ns("min_row_sum"), "Min gene total counts", value = 10, min = 0, step = 1),
+                numericInput(ns("min_row_sum"), "Min gene total counts", value = 0, min = 0, step = 1),
                 checkboxInput(ns("scale_rows"), "Scale rows (z-score)", value = TRUE),
                 
                 hr(),
@@ -60,18 +60,20 @@ heatmapUI <- function(id) {
     )
 }
 
-heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
+heatmapServer <- function(id, meta_data, display_meta_data, counts_data, deseq_data) {
     moduleServer(id, function(input, output, session) {
         
         # --- 1. Robust Data Preparation (Smart Renamer) ---
         clean_data <- reactive({
-            req(meta_data(), counts_data(), deseq_data())
+            req(meta_data(), display_meta_data(), counts_data(), deseq_data())
             
             meta <- copy(meta_data())
+            display_meta <- copy(display_meta_data())
             counts <- copy(counts_data())
             deseq <- copy(deseq_data())
             
             if(!is.data.table(meta)) setDT(meta)
+            if(!is.data.table(display_meta)) setDT(display_meta)
             if(!is.data.table(counts)) setDT(counts)
             if(!is.data.table(deseq)) setDT(deseq)
             
@@ -96,6 +98,15 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
                     setnames(meta, colnames(meta)[1], "sampleID") # Fallback to 1st col
                 }
             }
+            if (!"sampleID" %in% colnames(display_meta)) {
+                candidates <- c("Sample", "SampleID", "id", "ID", "name", "Name")
+                found <- intersect(colnames(display_meta), candidates)
+                if (length(found) > 0) {
+                    setnames(display_meta, found[1], "sampleID")
+                } else {
+                    setnames(display_meta, colnames(display_meta)[1], "sampleID")
+                }
+            }
             
             # C. Fix DESeq Columns
             # LogFC
@@ -107,17 +118,24 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
             if (!"pvalue" %in% colnames(deseq) && "P.Value" %in% colnames(deseq)) setnames(deseq, "P.Value", "pvalue")
             
             # D. Match Samples (Counts vs Metadata)
-            common_samples <- intersect(colnames(counts), meta$sampleID)
+            common_samples <- meta$sampleID[meta$sampleID %in% colnames(counts)]
+            display_samples <- display_meta$sampleID[display_meta$sampleID %in% common_samples]
             
             if (length(common_samples) == 0) {
                 return(list(error = paste0("Error: No matching samples found.\nCounts columns: ", paste(head(colnames(counts)), collapse=", "),
                                            "\nMetadata IDs: ", paste(head(meta$sampleID), collapse=", "))))
             }
+            if (length(display_samples) == 0) {
+                return(list(error = "No selected comparison samples were found in the counts matrix."))
+            }
             
-            # Subset and Order
+            # Preserve full metadata order for the all-sample context.
             meta <- meta[sampleID %in% common_samples]
-            # Ensure Counts columns are in the same order as Metadata rows
-            meta <- meta[match(common_samples, meta$sampleID)] 
+            meta <- meta[match(common_samples, meta$sampleID)]
+
+            # Preserve filtered metadata order for displayed samples, just like the standalone script.
+            display_meta <- display_meta[sampleID %in% display_samples]
+            display_meta <- display_meta[match(display_samples, display_meta$sampleID)]
             
             # E. Find Gene ID in DESeq to match Counts
             de_id_col <- "gene_name"
@@ -127,7 +145,15 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
                 if (length(found) > 0) de_id_col <- found[1] else de_id_col <- colnames(deseq)[1]
             }
             
-            list(meta = meta, counts = counts, deseq = deseq, de_id_col = de_id_col, samples = common_samples)
+            list(
+                meta = meta,
+                display_meta = display_meta,
+                counts = counts,
+                deseq = deseq,
+                de_id_col = de_id_col,
+                samples = common_samples,
+                display_samples = display_samples
+            )
         })
         
         # --- 2. Filter & Matrix Prep ---
@@ -136,10 +162,12 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
             if (!is.null(dd$error)) return(NULL)
             
             meta <- dd$meta
+            display_meta <- dd$display_meta
             counts <- dd$counts
             deseq <- dd$deseq
             de_id_col <- dd$de_id_col
             samples <- dd$samples
+            display_samples <- dd$display_samples
             
             # Check required columns
             filter_col <- input$filter_column
@@ -147,7 +175,7 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
             if (!"log2FoldChange" %in% colnames(deseq)) return(list(error = "Column log2FoldChange missing in DESeq results"))
             
             # Filter Significant Genes
-            d_sig <- deseq[ !is.na(get(filter_col)) & get(filter_col) <= input$pval_thresh & abs(log2FoldChange) >= input$lfc_thresh ]
+            d_sig <- deseq[ !is.na(get(filter_col)) & get(filter_col) <= input$pval_thresh & abs(log2FoldChange) > input$lfc_thresh ]
             
             sig_genes <- unique(d_sig[[de_id_col]])
             
@@ -158,28 +186,30 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
             
             if (nrow(counts_filtered) == 0) return(list(error = "Significant genes found, but IDs don't match Counts file."))
             
-            # Make Matrix
-            mm <- as.matrix(counts_filtered[, samples, with = FALSE])
-            rownames(mm) <- counts_filtered$gene_name
+            # Make Matrix on all matched samples first, mirroring the standalone script.
+            mm_all <- as.matrix(counts_filtered[, samples, with = FALSE])
+            rownames(mm_all) <- counts_filtered$gene_name
             
             # Row Sum Filter
-            keep_rows <- which(rowSums(mm, na.rm=TRUE) >= input$min_row_sum)
-            mm <- mm[keep_rows, , drop = FALSE]
+            keep_rows <- which(rowSums(mm_all, na.rm=TRUE) >= input$min_row_sum)
+            mm_all <- mm_all[keep_rows, , drop = FALSE]
             
-            if (nrow(mm) < 2) return(list(error = "Not enough genes remaining after filtering (need at least 2)."))
+            if (nrow(mm_all) < 2) return(list(error = "Not enough genes remaining after filtering (need at least 2)."))
             
-            # Scale (Z-Score)
+            # Scale across all matched samples first, then subset displayed samples.
             if (isTRUE(input$scale_rows)) {
-                mm <- t(scale(t(mm), center = TRUE, scale = TRUE))
-                mm[is.na(mm)] <- 0
+                mm_all <- t(scale(t(mm_all), center = TRUE, scale = TRUE))
+                mm_all[is.na(mm_all)] <- 0
             }
             
-            # Supervised Sorting
-            ann <- meta
+            ann <- display_meta
             if (input$mode == "supervised" && "Group" %in% colnames(ann)) {
-                ann <- ann[order(ann$Group)]
-                mm <- mm[, ann$sampleID]
+                if (!is.factor(ann$Group)) {
+                    ann[, Group := factor(Group, levels = unique(as.character(Group)))]
+                }
             }
+
+            mm <- mm_all[, display_samples, drop = FALSE]
             
             list(mat = mm, ann = ann)
         })
@@ -193,19 +223,17 @@ heatmapServer <- function(id, meta_data, counts_data, deseq_data) {
             ann <- prep$ann
             
             # Colors
-            my_col <- colorRamp2(breaks = c(-2, 0, 2), colors = c('#00429d', 'white', '#93003a'))
-            if (isTRUE(input$scale_rows)) {
-                # Heuristic for Z-scores limits
-                lim <- max(abs(range(m)))
-                my_col <- colorRamp2(breaks = c(-lim, 0, lim), colors = c('#00429d', 'white', '#93003a'))
-            }
+            my_col <- colorRamp2(
+                breaks = c(-4, -2, 0, 2, 4),
+                colors = c('#00429d', '#73a2c6', 'grey96', '#f4777f', '#93003a')
+            )
             
             # Annotation
             ha <- NULL
             if ("Group" %in% colnames(ann)) {
-                # Colors for groups
                 grps <- unique(as.character(ann$Group))
                 colors <- colorRampPalette(c("#3a5cbc", "#a62a17"))(length(grps))
+                colors <- colorspace::lighten(colors, 0.25)
                 names(colors) <- grps
                 
                 ha <- HeatmapAnnotation(

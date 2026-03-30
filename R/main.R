@@ -126,15 +126,15 @@ server <- function(input, output, session) {
     heatmap_counts <- reactive({
         # Case A: User ran the DE tab analysis? -> Use calculated normalized counts
         if (!is.null(de_state$results()) && !is.null(de_state$results()$counts)) {
-            return(subset_counts_to_meta(de_state$results()$counts, filtered_meta()))
+            return(de_state$results()$counts)
         } 
         # Case B: User uploaded a Normalized Counts file? -> Use that
         else if (!is.null(data_list$norm_counts())) {
-            return(subset_counts_to_meta(data_list$norm_counts(), filtered_meta()))
+            return(data_list$norm_counts())
         }
         # Case C: Fallback to raw counts (Visuals might be un-normalized)
         else {
-            return(filtered_counts())
+            return(data_list$counts())
         }
     })
     
@@ -151,6 +151,36 @@ server <- function(input, output, session) {
     
     final_meta <- reactive({
         filtered_meta()
+    })
+
+    heatmap_display_meta <- reactive({
+        meta <- filtered_meta()
+        subset_info <- de_state$active_subset()
+
+        if (is.null(meta) || is.null(subset_info)) {
+            return(meta)
+        }
+
+        main_factor <- subset_info$main_factor
+        if (!main_factor %in% colnames(meta)) {
+            return(meta)
+        }
+
+        ordered_levels <- c(
+            subset_info$target_level,
+            subset_info$ref_level,
+            setdiff(unique(as.character(meta[[main_factor]])), c(subset_info$target_level, subset_info$ref_level))
+        )
+
+        meta[[main_factor]] <- factor(as.character(meta[[main_factor]]), levels = ordered_levels)
+        meta
+    })
+
+    full_meta <- reactive({
+        if (!is.null(de_state$results()) && !is.null(de_state$results()$meta)) {
+            return(de_state$results()$meta)
+        }
+        data_list$metadata()
     })
 
     # 4. Run PCA with the chosen data
@@ -172,7 +202,13 @@ server <- function(input, output, session) {
     #         deseq_data  = final_deseq
     #     )
 
-    heatmapServer("heat1", meta_data = final_meta, counts_data = heatmap_counts, deseq_data = final_deseq)
+    heatmapServer(
+        "heat1",
+        meta_data = full_meta,
+        display_meta_data = heatmap_display_meta,
+        counts_data = heatmap_counts,
+        deseq_data = final_deseq
+    )
 }
 
 shinyApp(ui, server)

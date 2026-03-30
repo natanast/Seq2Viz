@@ -239,12 +239,12 @@ deserver <- function(id, counts_data, meta_data) {
 
             gene_col <- colnames(cts)[1]
             keep_sample_ids <- unique(as.character(meta[[subset_info$sample_col]]))
-            keep_cols <- c(gene_col, intersect(colnames(cts), keep_sample_ids))
+            ordered_sample_ids <- keep_sample_ids[keep_sample_ids %in% colnames(cts)]
+            keep_cols <- c(gene_col, ordered_sample_ids)
 
             if (length(keep_cols) <= 1) return(NULL)
 
             cts <- cts[, ..keep_cols]
-            meta <- meta[match(setdiff(colnames(cts), gene_col), meta[[subset_info$sample_col]]), ]
 
             list(
                 counts = cts,
