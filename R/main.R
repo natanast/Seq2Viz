@@ -37,7 +37,7 @@ ui <- navbarPage(
     ),
 
     tabPanel(
-        "Deferential exprassion",
+        "Differential expression",
         deUI("de")
     ),
 
