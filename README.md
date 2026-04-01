@@ -55,8 +55,39 @@ setwd("path_to_your_working_directory/Seq2Viz")
 library(shiny)
 runApp("R/main.R")
 ```
-
 ## Input Data Requirements
+
+Seq2Viz can be used in two workflows.
+
+### Option 1: Run DESeq2 inside the app
+
+Required files:
+
+1. **Sample metadata**
+   - Must contain a sample identifier column such as `sampleID`.
+   - Must contain a grouping column such as `Group`.
+   - Additional columns such as `patientID`, `batch`, or other covariates can also be included.
+     
+2. **Raw counts file**
+   * The first column must be named `gene_name` and contain the gene identifiers.
+   * All subsequent columns must contain the raw read counts for each sample. 
+   * **Note:** The column names for the samples must exactly match the `sampleID` column provided in the metadata file.
+
+### Option 2: Upload external DESeq2 output
+
+Required files:
+
+1. **Sample metadata**
+   - Must contain a sample identifier column such as `sampleID`.
+   - Must contain a grouping column such as `Group`.
+   - Additional columns such as `patientID`, batch, or other covariates can also be included.
+
+2. **DESeq2 results**
+   - Must contain at least the following columns: `Geneid`, `pvalue`, `padj`.
+
+3. **Normalized counts**
+   - Should contain one gene identifier column, typically `gene_name`
+   - Remaining columns should be normalized expression values for the samples
 
 To use Seq2Viz, provide the following datasets:
 
