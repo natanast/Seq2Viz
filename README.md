@@ -25,8 +25,11 @@ This app requires several R packages. You can install them as follows:
 ### CRAN packages
 
 ``` r
-install.packages(c( "shiny", "bslib", "shinyWidgets", "data.table", "readxl", "stringr", "ggplot2", "ggrepel", "colorspace",
-  "shadowtext", "ggplotify", "colorRamp2", "ggforce"))
+install.packages(c(
+  "shiny", "data.table", "readxl", "stringr", "ggplot2", 
+  "ggrepel", "colorspace", "shadowtext", "bslib", "shinyWidgets", 
+  "colorRamp2", "ggplotify", "ggforce", "DT", "shinycssloaders", "ashr"
+))
 ```
 
 ### Bioconductor packages
@@ -35,7 +38,7 @@ install.packages(c( "shiny", "bslib", "shinyWidgets", "data.table", "readxl", "s
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
-BiocManager::install(c("ComplexHeatmap","circlize"))
+BiocManager::install(c("DESeq2", "ComplexHeatmap", "circlize"))
 ```
 
 ## Usage
