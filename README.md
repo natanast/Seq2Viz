@@ -89,14 +89,6 @@ Required files:
    - Should contain one gene identifier column, typically `gene_name`
    - Remaining columns should be normalized expression values for the samples
 
-To use Seq2Viz, provide the following datasets:
-
-1.  **DESeq2 results file**
-    -   Must contain at least the following columns: `Geneid`, `pvalue`, `padj`.
-2.  **Gene counts file**
-    -   Must contain a `gene_name` column with gene identifiers.
-3.  **Sample metadata file**
-    -   Must contain `sampleID`, `patientID`, and `Group1` columns.
 
 ## How to Use This App
 
