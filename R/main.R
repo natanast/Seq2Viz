@@ -1,11 +1,11 @@
 
-source("libraries.R")
-source("upload.R")
-source("de.R")
-source("volcano.R")
-source("pca.R")
-source("home.R")
-source("heatmap.R")
+source("R/libraries.R")
+source("R/upload.R")
+source("R/de.R")
+source("R/volcano.R")
+source("R/pca.R")
+source("R/home.R")
+source("R/heatmap.R")
 
 
 
@@ -219,7 +219,8 @@ server <- function(input, output, session) {
     )
 }
 
-shinyApp(ui, server)
+ 
+# shinyApp(ui, server)
 
 
 
