@@ -69,7 +69,7 @@ Required files:
    - Additional columns such as `patientID`, `batch`, or other covariates can also be included.
      
 2. **Raw counts file**
-   * The first column must be named `gene_name` and contain the gene identifiers.
+   * The **first** column must be named `gene_name` and contain the gene identifiers.
    * All subsequent columns must contain the raw read counts for each sample. 
    * **Note:** The column names for the samples must exactly match the `sampleID` column provided in the metadata file.
 
@@ -80,21 +80,22 @@ Required files:
 1. **Sample metadata**
    - Must contain a sample identifier column such as `sampleID`.
    - Must contain a grouping column such as `Group`.
-   - Additional columns such as `patientID`, batch, or other covariates can also be included.
+   - Additional columns such as `patientID`, `batch`, or other covariates can also be included.
 
 2. **DESeq2 results**
    - Must contain at least the following columns: `Geneid`, `pvalue`, `padj`.
 
 3. **Normalized counts**
-   - Should contain one gene identifier column, typically `gene_name`
-   - Remaining columns should be normalized expression values for the samples
-
+   - The **first** column must be named `gene_name` and contain the gene identifiers.
+   - All subsequent columns must contain the normalized expression values for each sample.
+   - **Note:** The column names for the samples must exactly match the `sampleID` column provided in the metadata file.
 
 ## How to Use This App
 
 1.  Upload your datasets under the **`Upload files`** tab.
-2.  Explore sample clustering and relationships in the **`PCA Plot`** tab.
-3.  Visualize differential expression in the **`Volcano Plot`** and **`Heatmap`** tabs.
+2.  If using *Option 1*, navigate to the **`Differential Expression`** tab to run the analysis.
+3.  Explore sample clustering and relationships in the **`PCA Plot`** tab.
+4.  Visualize differential expression in the **`Volcano Plot`** and **`Heatmap`** tabs.
 
 ## Example Data & Output
 
@@ -103,19 +104,25 @@ The files are available in the `example_data/` folder of the repository.
 
 **Files**
 
+-   `example_data/gene_counts.txt` — raw gene counts
+
+-   `example_data/sample_metadata.xlsx` — sample metadata
+      
 -   `example_data/deseq2_treatment_vs_control.xlsx` — DESeq2 results
 
 -   `example_data/gene_counts_deseq2_normalized.txt` — normalized counts
 
--   `example_data/sample_metadata.xlsx` — sample metadata
+
 
 **How to try**
 
 1\. Launch the app (see **Usage** above).
 
-2\. Go to **`Upload files`** and select the three files from `example_data/`.
+2\. Go to **`Upload files`** and select the files from `example_data/`.
 
-3\. Open **`PCA Plot`** (you should see two groups), **`Volcano Plot`** (a small set of DE genes) and **`Heatmap`** (supervised and unsupervised).
+3\. If using *Option 1*, open **`Differential exprassion tab`** and run the DESeq2 analysis based on the Group and patientID covariate.
+
+4\. Open **`PCA Plot`** (you should see two groups), **`Volcano Plot`** (a small set of DE genes) and **`Heatmap`** (supervised and unsupervised).
 
 **Current coverage**
 
