@@ -1,7 +1,7 @@
 {
   "version": 1,
   "locale": "en_US",
-  "platform": "4.5.2",
+  "platform": "4.5.3",
   "metadata": {
     "appmode": "shiny",
     "primary_rmd": null,
@@ -204,29 +204,29 @@
         "Package": "ComplexHeatmap",
         "Type": "Package",
         "Title": "Make Complex Heatmaps",
-        "Version": "2.26.0",
-        "Date": "2025-06-23",
-        "Authors@R": "person(\"Zuguang\", \"Gu\", email = \"z.gu@dkfz.de\", role = c(\"aut\", \"cre\"),\n                  comment = c('ORCID'=\"0000-0002-7395-8709\"))",
+        "Version": "2.26.1",
+        "Date": "2026-01-30",
+        "Authors@R": "person(\"Zuguang\", \"Gu\", email = \"guzuguang@suat-sz.edu.cn\", role = c(\"aut\", \"cre\"),\n                  comment = c('ORCID'=\"0000-0002-7395-8709\"))",
         "Depends": "R (>= 4.0.0), methods, grid, graphics, stats, grDevices",
         "Imports": "circlize (>= 0.4.14), GetoptLong, colorspace, clue,\nRColorBrewer, GlobalOptions (>= 0.1.0), png, digest, IRanges,\nmatrixStats, foreach, doParallel, codetools",
         "Suggests": "testthat (>= 1.0.0), knitr, markdown, dendsort, jpeg, tiff,\nfastcluster, EnrichedHeatmap, dendextend (>= 1.0.1), grImport,\ngrImport2, glue, GenomicRanges, gridtext, pheatmap (>= 1.0.12),\ngridGraphics, gplots, rmarkdown, Cairo, magick",
         "VignetteBuilder": "knitr",
-        "Description": "Complex heatmaps are efficient to visualize associations \n    between different sources of data sets and reveal potential patterns. \n    Here the ComplexHeatmap package provides a highly flexible way to arrange \n    multiple heatmaps and supports various annotation graphics.",
+        "Description": "Complex heatmaps are efficient to visualize associations\n        between different sources of data sets and reveal potential\n        patterns. Here the ComplexHeatmap package provides a highly\n        flexible way to arrange multiple heatmaps and supports various\n        annotation graphics.",
         "biocViews": "Software, Visualization, Sequencing",
         "URL": "https://github.com/jokergoo/ComplexHeatmap,\nhttps://jokergoo.github.io/ComplexHeatmap-reference/book/",
         "License": "MIT + file LICENSE",
         "RoxygenNote": "7.2.3",
-        "git_url": "https://git.bioconductor.org/packages/ComplexHeatmap",
-        "git_branch": "RELEASE_3_22",
-        "git_last_commit": "4803c6d",
-        "git_last_commit_date": "2025-10-29",
-        "Repository": "Bioconductor 3.22",
-        "Date/Publication": "2025-10-29",
+        "Config/pak/sysreqs": "libpng-dev perl",
+        "Repository": "https://bioc-release.r-universe.dev",
+        "Date/Publication": "2026-01-30 06:26:50 UTC",
+        "RemoteUrl": "https://github.com/bioc/ComplexHeatmap",
+        "RemoteRef": "RELEASE_3_22",
+        "RemoteSha": "880562b42a0cf2c190b461c045198463232a6305",
         "NeedsCompilation": "no",
-        "Packaged": "2025-10-30 03:15:54 UTC; biocbuild",
+        "Packaged": "2026-03-02 04:26:56 UTC; root",
         "Author": "Zuguang Gu [aut, cre] (ORCID: <https://orcid.org/0000-0002-7395-8709>)",
-        "Maintainer": "Zuguang Gu <z.gu@dkfz.de>",
-        "Built": "R 4.5.1; ; 2025-11-04 13:17:10 UTC; windows"
+        "Maintainer": "Zuguang Gu <guzuguang@suat-sz.edu.cn>",
+        "Built": "R 4.5.2; ; 2026-03-02 04:30:17 UTC; windows"
       }
     },
     "DESeq2": {
@@ -287,7 +287,12 @@
         "Maintainer": "Garrick Aden-Buie <garrick@posit.co>",
         "Repository": "CRAN",
         "Date/Publication": "2025-09-02 22:00:06 UTC",
-        "Built": "R 4.5.1; ; 2025-09-05 23:51:57 UTC; windows"
+        "Built": "R 4.5.3; ; 2026-03-28 21:01:55 UTC; windows",
+        "RemoteType": "standard",
+        "RemotePkgRef": "DT",
+        "RemoteRef": "DT",
+        "RemoteRepos": "https://cran.rstudio.com",
+        "RemoteSha": "0.34.0"
       }
     },
     "DelayedArray": {
@@ -992,7 +997,7 @@
         "Author": "Matthew Stephens [aut],\n  Peter Carbonetto [aut, cre],\n  Chaoxing Dai [ctb],\n  David Gerard [aut],\n  Mengyin Lu [aut],\n  Lei Sun [aut],\n  Jason Willwerscheid [aut],\n  Nan Xiao [aut],\n  Mazon Zeng [ctb]",
         "Repository": "CRAN",
         "Date/Publication": "2023-08-21 23:50:03 UTC",
-        "Built": "R 4.5.2; x86_64-w64-mingw32; 2025-12-03 04:56:04 UTC; windows",
+        "Built": "R 4.5.3; x86_64-w64-mingw32; 2026-03-28 20:19:29 UTC; windows",
         "Archs": "x64",
         "RemoteType": "standard",
         "RemotePkgRef": "ashr",
@@ -1060,7 +1065,12 @@
         "Maintainer": "Carson Sievert <carson@posit.co>",
         "Repository": "CRAN",
         "Date/Publication": "2026-01-26 08:10:02 UTC",
-        "Built": "R 4.5.2; ; 2026-01-30 08:44:59 UTC; windows"
+        "Built": "R 4.5.3; ; 2026-03-28 20:11:57 UTC; windows",
+        "RemoteType": "standard",
+        "RemotePkgRef": "bslib",
+        "RemoteRef": "bslib",
+        "RemoteRepos": "https://cran.rstudio.com",
+        "RemoteSha": "0.10.0"
       }
     },
     "cachem": {
@@ -1265,7 +1275,7 @@
         "Packaged": "2024-03-31 18:18:09 UTC; luke",
         "Repository": "CRAN",
         "Date/Publication": "2024-03-31 20:10:06 UTC",
-        "Built": "R 4.5.2; ; 2025-10-31 09:58:26 UTC; windows"
+        "Built": "R 4.5.3; ; 2026-03-11 08:55:50 UTC; windows"
       }
     },
     "colorRamp2": {
@@ -1291,7 +1301,12 @@
         "Maintainer": "Zuguang Gu <z.gu@dkfz.de>",
         "Repository": "CRAN",
         "Date/Publication": "2022-12-21 16:50:02 UTC",
-        "Built": "R 4.5.0; ; 2025-04-21 00:40:16 UTC; windows"
+        "Built": "R 4.5.3; ; 2026-03-28 19:04:37 UTC; windows",
+        "RemoteType": "standard",
+        "RemotePkgRef": "colorRamp2",
+        "RemoteRef": "colorRamp2",
+        "RemoteRepos": "https://cran.rstudio.com",
+        "RemoteSha": "0.1.0"
       }
     },
     "colorspace": {
@@ -1320,7 +1335,7 @@
         "Maintainer": "Achim Zeileis <Achim.Zeileis@R-project.org>",
         "Repository": "CRAN",
         "Date/Publication": "2025-09-22 13:20:02 UTC",
-        "Built": "R 4.5.1; x86_64-w64-mingw32; 2025-09-23 23:50:51 UTC; windows",
+        "Built": "R 4.5.3; x86_64-w64-mingw32; 2026-03-28 18:48:23 UTC; windows",
         "Archs": "x64",
         "RemoteType": "standard",
         "RemotePkgRef": "colorspace",
@@ -1468,8 +1483,13 @@
         "Maintainer": "Tyson Barrett <t.barrett88@gmail.com>",
         "Repository": "CRAN",
         "Date/Publication": "2026-01-27 11:40:15 UTC",
-        "Built": "R 4.5.2; x86_64-w64-mingw32; 2026-01-30 08:45:16 UTC; windows",
-        "Archs": "x64"
+        "Built": "R 4.5.3; x86_64-w64-mingw32; 2026-03-28 18:48:23 UTC; windows",
+        "Archs": "x64",
+        "RemoteType": "standard",
+        "RemotePkgRef": "data.table",
+        "RemoteRef": "data.table",
+        "RemoteRepos": "https://cran.rstudio.com",
+        "RemoteSha": "1.18.2.1"
       }
     },
     "digest": {
@@ -2037,8 +2057,13 @@
         "Author": "Thomas Lin Pedersen [cre, aut] (ORCID:\n    <https://orcid.org/0000-0002-5147-4711>),\n  RStudio [cph]",
         "Repository": "CRAN",
         "Date/Publication": "2025-06-18 12:40:02 UTC",
-        "Built": "R 4.5.0; x86_64-w64-mingw32; 2025-06-20 23:51:02 UTC; windows",
-        "Archs": "x64"
+        "Built": "R 4.5.3; x86_64-w64-mingw32; 2026-03-28 20:30:33 UTC; windows",
+        "Archs": "x64",
+        "RemoteType": "standard",
+        "RemotePkgRef": "ggforce",
+        "RemoteRef": "ggforce",
+        "RemoteRepos": "https://cran.rstudio.com",
+        "RemoteSha": "0.5.0"
       }
     },
     "ggiraph": {
@@ -2108,7 +2133,7 @@
         "Maintainer": "Thomas Lin Pedersen <thomas.pedersen@posit.co>",
         "Repository": "CRAN",
         "Date/Publication": "2026-02-03 08:50:23 UTC",
-        "Built": "R 4.5.2; ; 2026-02-06 00:52:09 UTC; windows",
+        "Built": "R 4.5.3; ; 2026-03-28 20:11:54 UTC; windows",
         "RemoteType": "standard",
         "RemotePkgRef": "ggplot2",
         "RemoteRef": "ggplot2",
@@ -2141,7 +2166,7 @@
         "Maintainer": "Guangchuang Yu <guangchuangyu@gmail.com>",
         "Repository": "CRAN",
         "Date/Publication": "2025-09-20 05:10:11 UTC",
-        "Built": "R 4.5.1; ; 2025-09-22 12:55:03 UTC; windows",
+        "Built": "R 4.5.3; ; 2026-03-28 20:30:28 UTC; windows",
         "RemoteType": "standard",
         "RemotePkgRef": "ggplotify",
         "RemoteRef": "ggplotify",
@@ -2174,7 +2199,7 @@
         "Maintainer": "Kamil Slowikowski <kslowikowski@gmail.com>",
         "Repository": "CRAN",
         "Date/Publication": "2026-03-17 08:30:38 UTC",
-        "Built": "R 4.5.3; x86_64-w64-mingw32; 2026-03-18 00:52:13 UTC; windows",
+        "Built": "R 4.5.3; x86_64-w64-mingw32; 2026-03-28 20:30:03 UTC; windows",
         "Archs": "x64",
         "RemoteType": "standard",
         "RemotePkgRef": "ggrepel",
@@ -3325,8 +3350,13 @@
         "Maintainer": "Jennifer Bryan <jenny@posit.co>",
         "Repository": "CRAN",
         "Date/Publication": "2025-03-07 17:10:02 UTC",
-        "Built": "R 4.5.0; x86_64-w64-mingw32; 2025-04-21 02:29:17 UTC; windows",
-        "Archs": "x64"
+        "Built": "R 4.5.3; x86_64-w64-mingw32; 2026-03-28 21:01:53 UTC; windows",
+        "Archs": "x64",
+        "RemoteType": "standard",
+        "RemotePkgRef": "readxl",
+        "RemoteRef": "readxl",
+        "RemoteRepos": "https://cran.rstudio.com",
+        "RemoteSha": "1.4.5"
       }
     },
     "rematch": {
@@ -3532,7 +3562,12 @@
         "Maintainer": "Guangchuang Yu <guangchuangyu@gmail.com>",
         "Repository": "CRAN",
         "Date/Publication": "2025-08-24 08:40:02 UTC",
-        "Built": "R 4.5.1; ; 2025-08-25 05:45:15 UTC; windows"
+        "Built": "R 4.5.3; ; 2026-03-28 21:04:03 UTC; windows",
+        "RemoteType": "standard",
+        "RemotePkgRef": "shadowtext",
+        "RemoteRef": "shadowtext",
+        "RemoteRepos": "https://cran.rstudio.com",
+        "RemoteSha": "0.1.6"
       }
     },
     "shape": {
@@ -3582,7 +3617,7 @@
         "Maintainer": "Carson Sievert <carson@posit.co>",
         "Repository": "CRAN",
         "Date/Publication": "2026-02-20 09:00:03 UTC",
-        "Built": "R 4.5.2; ; 2026-02-22 00:50:49 UTC; windows",
+        "Built": "R 4.5.3; ; 2026-03-28 20:30:01 UTC; windows",
         "RemoteType": "standard",
         "RemotePkgRef": "shiny",
         "RemoteRef": "shiny",
@@ -3614,7 +3649,7 @@
         "Maintainer": "Victor Perrier <victor.perrier@dreamrs.fr>",
         "Repository": "CRAN",
         "Date/Publication": "2026-03-09 08:30:02 UTC",
-        "Built": "R 4.5.2; ; 2026-03-09 13:31:25 UTC; windows",
+        "Built": "R 4.5.3; ; 2026-03-28 20:46:54 UTC; windows",
         "RemoteType": "standard",
         "RemotePkgRef": "shinyWidgets",
         "RemoteRef": "shinyWidgets",
@@ -3645,7 +3680,7 @@
         "Maintainer": "Dean Attali <daattali@gmail.com>",
         "Repository": "CRAN",
         "Date/Publication": "2024-07-30 22:30:02 UTC",
-        "Built": "R 4.5.2; ; 2026-01-23 03:27:30 UTC; windows",
+        "Built": "R 4.5.3; ; 2026-03-28 20:30:52 UTC; windows",
         "RemoteType": "standard",
         "RemotePkgRef": "shinycssloaders",
         "RemoteRef": "shinycssloaders",
@@ -3764,7 +3799,7 @@
         "Maintainer": "Hadley Wickham <hadley@posit.co>",
         "Repository": "CRAN",
         "Date/Publication": "2025-11-04 14:00:02 UTC",
-        "Built": "R 4.5.1; ; 2025-11-07 08:01:51 UTC; windows",
+        "Built": "R 4.5.3; ; 2026-03-28 20:11:53 UTC; windows",
         "RemoteType": "standard",
         "RemotePkgRef": "stringr",
         "RemoteRef": "stringr",
@@ -4271,7 +4306,7 @@
       "checksum": "9e670f824c8c93b385bd1d8ef7c8c79e"
     },
     "R/main.R": {
-      "checksum": "40c34a937fa41513b2bfd6a61d0bbcd1"
+      "checksum": "f12ec195f46fa716170700aa13e1fd9a"
     },
     "R/pca.R": {
       "checksum": "8cc93561bba2d48a8523b0f5600a3df9"
