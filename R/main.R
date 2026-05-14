@@ -37,7 +37,7 @@ ui <- navbarPage(
     ),
 
     tabPanel(
-        "Differential expression",
+        "Deferential exprassion",
         deUI("de")
     ),
 
@@ -219,8 +219,7 @@ server <- function(input, output, session) {
     )
 }
 
- 
-# shinyApp(ui, server)
+shinyApp(ui, server)
 
 
 

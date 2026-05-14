@@ -55,6 +55,15 @@ deserver <- function(id, counts_data, meta_data) {
             samp_col
         }
 
+        order_metadata <- function(meta, sample_col, main_factor = NULL) {
+            if (!is.null(main_factor) && main_factor %in% colnames(meta)) {
+                ord <- order(as.character(meta[[sample_col]]), as.character(meta[[main_factor]]))
+            } else {
+                ord <- order(as.character(meta[[sample_col]]))
+            }
+            meta[ord]
+        }
+
         subset_inputs <- reactive({
             meta_df <- meta_data()
             if (is.null(meta_df) ||
@@ -134,18 +143,20 @@ deserver <- function(id, counts_data, meta_data) {
                 
                 gene_col <- colnames(cts)[1] 
                 samp_col <- get_sample_col(meta)
-                
-                keep_cols <- c(gene_col, intersect(colnames(cts), meta[[samp_col]]))
-                
+                meta <- meta[!is.na(meta[[samp_col]]), ]
+                meta <- order_metadata(meta, samp_col, input$main_factor)
+
+                sample_ids <- as.character(meta[[samp_col]])
+                sample_ids <- sample_ids[sample_ids %in% colnames(cts)]
+
+                meta <- meta[match(sample_ids, as.character(meta[[samp_col]]))]
+                keep_cols <- c(gene_col, sample_ids)
                 cts <- cts[, ..keep_cols]
                 
                 mm <- as.matrix(cts[, -1, with=FALSE])
                 rownames(mm) <- cts[[1]]
                 
                 mm <- round(mm)
-                
-                meta <- meta[meta[[samp_col]] %in% colnames(mm), ]
-                meta <- meta[match(colnames(mm), meta[[samp_col]]), ]
 
                 validate(
                     need(nrow(meta) >= 2, "Need at least two samples for DESeq2 analysis."),
