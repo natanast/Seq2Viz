@@ -5,6 +5,7 @@ pcaUI <- function(id) {
     sidebarLayout(
         sidebarPanel(
             uiOutput(ns("group")),
+            uiOutput(ns("group_colors")),
 
             radioButtons(ns("filter_column"), "Filter DE genes by:",
                          choices = c("padj" = "padj", "pvalue" = "pvalue"),
@@ -31,6 +32,10 @@ pcaServer <- function(id, meta_data, counts_data, deseq_data) {
     moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
+
+        is_valid_hex <- function(x) {
+            is.character(x) && length(x) == 1 && grepl("^#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$", x)
+        }
 
         # 1. Update labels
         observe({
@@ -96,8 +101,8 @@ pcaServer <- function(id, meta_data, counts_data, deseq_data) {
                 return(list(error = "No significant genes found. Try relaxing the thresholds."))
             }
 
-            # Filter Counts
-            counts_filtered <- counts[ gene_name %in% gene_ids ]
+            # Filter counts while preserving DE gene order, matching the standalone script.
+            counts_filtered <- counts[match(gene_ids, gene_name, nomatch = 0)]
 
             if(nrow(counts_filtered) == 0) {
                 return(list(error = paste0("Error: IDs don't match.\nDESeq IDs (col: ", de_id_col, ")\nCounts IDs (col: gene_name)")))
@@ -124,6 +129,38 @@ pcaServer <- function(id, meta_data, counts_data, deseq_data) {
             meta_cols <- names(d$meta)
             default <- if ("patientID" %in% meta_cols) "patientID" else if ("sampleID" %in% meta_cols) "sampleID" else meta_cols[1]
             selectInput(ns("label_col"), "Label column", choices = meta_cols, selected = default)
+        })
+
+        output$group_colors <- renderUI({
+            req(pca_results(), input$group_col)
+
+            pca_dt <- pca_results()$pca_dt
+            group_col <- input$group_col
+
+            validate(need(group_col %in% colnames(pca_dt), paste0("Column '", group_col, "' not found.")))
+
+            groups <- unique(pca_dt[[group_col]])
+            groups <- groups[!is.na(groups)]
+            n_groups <- length(groups)
+
+            base_color_colors <- c("#990000", "#004d99")
+            default_colors <- colorspace::darken(
+                grDevices::colorRampPalette(base_color_colors)(max(1, n_groups)),
+                amount = 0.25
+            )
+
+            tagList(
+                hr(),
+                h5("Group Colors"),
+                p("Optional: enter hex colors for each group, for example #1f77b4."),
+                lapply(seq_along(groups), function(i) {
+                    textInput(
+                        ns(paste0("group_color_", i)),
+                        label = paste0(groups[i], " color"),
+                        value = default_colors[i]
+                    )
+                })
+            )
         })
 
         output$axis <- renderUI({
@@ -176,11 +213,12 @@ pcaServer <- function(id, meta_data, counts_data, deseq_data) {
                 if(length(found)>0) meta_samp_col <- found[1] else meta_samp_col <- colnames(meta)[1]
             }
 
-            common_samples <- intersect(pca_dt$sampleID, meta[[meta_samp_col]])
+            common_samples <- meta[[meta_samp_col]][meta[[meta_samp_col]] %in% pca_dt$sampleID]
             validate(need(length(common_samples) > 0, "No matching sample names between counts and metadata."))
 
-            pca_dt <- pca_dt[sampleID %in% common_samples]
-            pca_dt <- merge(pca_dt, meta, by.x = "sampleID", by.y = meta_samp_col, all.x = TRUE)
+            pca_dt <- pca_dt[match(common_samples, sampleID, nomatch = 0)]
+            meta <- meta[match(common_samples, meta[[meta_samp_col]])]
+            pca_dt <- merge(pca_dt, meta, by.x = "sampleID", by.y = meta_samp_col, all.x = TRUE, sort = FALSE)
 
             list(pca_dt = pca_dt, pca = pca)
         })
@@ -218,10 +256,14 @@ pcaServer <- function(id, meta_data, counts_data, deseq_data) {
             groups <- groups[!is.na(groups)]
             n_groups <- length(groups)
 
-            base_fill_colors <- c("#990000", "#004d99")
             base_color_colors <- c("#990000", "#004d99")
-            pal_fill <- colorspace::lighten(grDevices::colorRampPalette(base_fill_colors)(max(1, n_groups)), amount = 0.25)
-            pal_color <- colorspace::darken(grDevices::colorRampPalette(base_color_colors)(max(1, n_groups)), amount = 0.25)
+            default_color <- colorspace::darken(grDevices::colorRampPalette(base_color_colors)(max(1, n_groups)), amount = 0.25)
+            custom_color <- vapply(seq_along(groups), function(i) {
+                val <- input[[paste0("group_color_", i)]]
+                if (is_valid_hex(val)) val else default_color[i]
+            }, character(1))
+            pal_fill <- colorspace::lighten(custom_color, amount = 0.25)
+            pal_color <- custom_color
             names(pal_fill) <- groups
             names(pal_color) <- groups
 
