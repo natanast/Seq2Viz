@@ -49,12 +49,6 @@ deserver <- function(id, counts_data, meta_data) {
     
     moduleServer(id, function(input, output, session) {
 
-        get_sample_col <- function(df) {
-            samp_col <- grep("sample|id", colnames(df), ignore.case = TRUE, value = TRUE)[1]
-            if (is.na(samp_col)) samp_col <- colnames(df)[1]
-            samp_col
-        }
-
         order_metadata <- function(meta, sample_col, main_factor = NULL) {
             if (!is.null(main_factor) && main_factor %in% colnames(meta)) {
                 ord <- order(as.character(meta[[sample_col]]), as.character(meta[[main_factor]]))
@@ -147,7 +141,10 @@ deserver <- function(id, counts_data, meta_data) {
                 meta <- order_metadata(meta, samp_col, input$main_factor)
 
                 sample_ids <- as.character(meta[[samp_col]])
-                sample_ids <- sample_ids[sample_ids %in% colnames(cts)]
+                overlap <- check_sample_overlap(sample_ids, colnames(cts)[-1],
+                                                 meta_label = "metadata", other_label = "counts file")
+                if (!is.null(overlap$message)) showNotification(overlap$message, type = "warning", duration = NULL)
+                sample_ids <- overlap$common
 
                 meta <- meta[match(sample_ids, as.character(meta[[samp_col]]))]
                 keep_cols <- c(gene_col, sample_ids)
