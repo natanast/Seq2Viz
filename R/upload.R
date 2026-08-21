@@ -35,12 +35,6 @@ uploadServer <- function(id) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
-        get_sample_col <- function(df) {
-            samp_col <- grep("sample|id", colnames(df), ignore.case = TRUE, value = TRUE)[1]
-            if (is.na(samp_col)) samp_col <- colnames(df)[1]
-            samp_col
-        }
-        
         # Helper to read files
         read_file <- function(file_input) {
             if (is.null(file_input)) return(NULL)
@@ -127,8 +121,11 @@ uploadServer <- function(id) {
             if (!is.null(raw_counts)) {
                 raw_counts <- copy(raw_counts)
                 gene_col <- colnames(raw_counts)[1]
-                ordered_sample_ids <- unique(as.character(subset_meta[[sample_col]]))
-                ordered_sample_ids <- ordered_sample_ids[ordered_sample_ids %in% colnames(raw_counts)]
+                meta_ids <- unique(as.character(subset_meta[[sample_col]]))
+                overlap <- check_sample_overlap(meta_ids, colnames(raw_counts)[-1],
+                                                 meta_label = "metadata", other_label = "counts file")
+                if (!is.null(overlap$message)) showNotification(overlap$message, type = "warning", duration = NULL)
+                ordered_sample_ids <- overlap$common
                 keep_cols <- c(gene_col, ordered_sample_ids)
                 if (length(keep_cols) > 1) {
                     subset_counts <- raw_counts[, ..keep_cols]
