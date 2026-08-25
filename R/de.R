@@ -118,11 +118,31 @@ deserver <- function(id, counts_data, meta_data) {
         
         
         output$design_preview <- renderText({
-            
+
             req(input$main_factor)
             factors <- c(input$covariates, input$main_factor)
-            paste("Design Formula:\n~", paste(factors, collapse = " + "))
-            
+            preview <- paste("Design Formula:\n~", paste(factors, collapse = " + "))
+
+            df <- meta_data()
+            continuous_cols <- character(0)
+            if (!is.null(df) && length(input$covariates) > 0) {
+                for (col in input$covariates) {
+                    if (col %in% colnames(df) && !is_categorical_covariate(df[[col]])) {
+                        continuous_cols <- c(continuous_cols, col)
+                    }
+                }
+            }
+
+            if (length(continuous_cols) > 0) {
+                preview <- paste0(
+                    preview,
+                    "\n\nFit as continuous (not converted to a factor): ",
+                    paste(continuous_cols, collapse = ", ")
+                )
+            }
+
+            preview
+
         })
         
         
@@ -163,11 +183,16 @@ deserver <- function(id, counts_data, meta_data) {
                 )
                 
                 design_cols <- c(input$covariates, input$main_factor)
-                
+
                 for(col in design_cols) {
-                    meta[[col]] <- as.factor(meta[[col]])
+                    # The main factor always needs discrete ref/target levels to relevel()
+                    # against; covariates are coerced to a factor only when they behave
+                    # categorically (see is_categorical_covariate() for the rule).
+                    if (col == input$main_factor || is_categorical_covariate(meta[[col]])) {
+                        meta[[col]] <- as.factor(meta[[col]])
+                    }
                 }
-                
+
                 design_formula <- as.formula(paste0("~ ", paste(design_cols, collapse = " + ")))
                 
                 dds <- DESeqDataSetFromMatrix(

@@ -61,3 +61,28 @@ check_sample_overlap <- function(meta_ids, other_ids, meta_label = "metadata", o
 
     list(common = common, message = message)
 }
+
+# A numeric covariate is treated as categorical (coerced to a factor) only when it takes
+# on few distinct values relative to the number of samples -- e.g. a batch numerically
+# coded 1/2/3. Otherwise it is left as a continuous numeric covariate, since coercing a
+# quantity like age, RIN, or tumour purity to a factor gives it one level per sample and
+# produces a rank-deficient model matrix. Non-numeric columns are always categorical.
+#
+# Both thresholds must hold: at most NUMERIC_COVARIATE_MAX_LEVELS distinct values, AND
+# those values covering at most NUMERIC_COVARIATE_MAX_FRACTION of the samples. The
+# fraction check avoids misclassifying a genuinely continuous covariate in a small study
+# where every sample happens to have a distinct value (e.g. 4 samples, 4 distinct RIN
+# scores) as categorical just because the absolute count is low.
+NUMERIC_COVARIATE_MAX_LEVELS <- 5
+NUMERIC_COVARIATE_MAX_FRACTION <- 0.5
+
+is_categorical_covariate <- function(x, max_levels = NUMERIC_COVARIATE_MAX_LEVELS,
+                                      max_fraction = NUMERIC_COVARIATE_MAX_FRACTION) {
+    if (!is.numeric(x)) return(TRUE)
+
+    observed <- x[!is.na(x)]
+    if (length(observed) == 0) return(TRUE)
+
+    n_distinct <- length(unique(observed))
+    n_distinct <= max_levels && (n_distinct / length(observed)) <= max_fraction
+}
