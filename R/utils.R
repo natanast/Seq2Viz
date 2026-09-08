@@ -86,3 +86,79 @@ is_categorical_covariate <- function(x, max_levels = NUMERIC_COVARIATE_MAX_LEVEL
     n_distinct <- length(unique(observed))
     n_distinct <= max_levels && (n_distinct / length(observed)) <= max_fraction
 }
+
+# TRUE if `x` is fully determined by `group` -- i.e. constant within every level of
+# `group` -- which is how most real confounding between a covariate and a factor arises
+# in practice (a numeric value that never varies within patient, or a batch that never
+# varies within treatment group). Requires `group` to actually group more than one sample
+# together; otherwise every `x` would be trivially "constant" within singleton groups,
+# which would flag confounding between any variable and one that merely happens to be
+# unique per sample (e.g. a nearly-continuous covariate) even though no real redundancy
+# exists.
+is_constant_within_groups <- function(x, group) {
+    if (length(x) == 0) return(FALSE)
+    if (length(unique(group)) >= length(group)) return(FALSE)
+
+    groups <- split(x, group)
+    all(vapply(groups, function(v) length(unique(v[!is.na(v)])) <= 1, logical(1)))
+}
+
+# Search all pairs of design columns for one being fully determined by the other. Returns
+# c(determined_variable, determining_variable) for the first such pair found, or NULL if
+# none of the pairs show this relationship.
+find_confounded_pair <- function(meta, design_cols) {
+    if (length(design_cols) < 2) return(NULL)
+
+    combos <- utils::combn(design_cols, 2, simplify = FALSE)
+    for (pair in combos) {
+        a <- pair[1]; b <- pair[2]
+        if (is_constant_within_groups(meta[[a]], meta[[b]])) return(c(a, b))
+        if (is_constant_within_groups(meta[[b]], meta[[a]])) return(c(b, a))
+    }
+    NULL
+}
+
+# Checks a design matrix for rank deficiency before DESeq2 ever sees it, so a confounded
+# or over-parameterised design produces a plain-language message instead of DESeq2's raw
+# "model matrix is not full rank" error. Two distinct failure modes are reported
+# separately, since they call for different fixes:
+#   - Over-parameterisation: the formula has at least as many parameters as samples, e.g.
+#     too many factor levels for the amount of data. Fix: simplify the design or collect
+#     more samples.
+#   - Confounding: two variables are collinear -- most commonly because one is fully
+#     determined by the other, e.g. a numeric covariate that is constant within every
+#     level of a factor. Fix: drop one of the confounded variables.
+# Does nothing (returns invisibly) when the design is full rank.
+check_design_rank <- function(meta, design_formula, design_cols) {
+    mm <- stats::model.matrix(design_formula, data = as.data.frame(meta))
+    n <- nrow(mm)
+    p <- ncol(mm)
+
+    if (p >= n) {
+        stop(
+            "The design '", paste(deparse(design_formula), collapse = " "), "' has ", p,
+            " parameters but only ", n, " sample(s). There are too many factor levels ",
+            "(or covariates) for the amount of data available to fit. Remove or simplify ",
+            "one of: ", paste(design_cols, collapse = ", "), "."
+        )
+    }
+
+    rank <- qr(mm)$rank
+    if (rank == p) return(invisible(NULL))
+
+    confounded <- find_confounded_pair(meta, design_cols)
+    if (!is.null(confounded)) {
+        stop(
+            "'", confounded[1], "' and '", confounded[2], "' are confounded: ",
+            confounded[1], " is fully determined by ", confounded[2],
+            " (every sample with the same ", confounded[2], " has the same ", confounded[1],
+            "), so the model cannot separate their effects. Remove one of them from the design."
+        )
+    }
+
+    stop(
+        "The design matrix is not full rank (rank ", rank, " of ", p, " parameters). ",
+        "Some combination of variables in the design is redundant. Try removing one of: ",
+        paste(design_cols, collapse = ", "), "."
+    )
+}

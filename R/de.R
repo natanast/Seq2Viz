@@ -333,7 +333,12 @@ deserver <- function(id, counts_data, meta_data) {
                 }
 
                 design_formula <- as.formula(paste0("~ ", paste(design_cols, collapse = " + ")))
-                
+
+                # Catch a rank-deficient design here, with a plain-language explanation,
+                # rather than letting DESeqDataSetFromMatrix() fail with its raw
+                # "model matrix is not full rank" error.
+                check_design_rank(meta, design_formula, design_cols)
+
                 dds <- DESeqDataSetFromMatrix(
                     countData = mm, 
                     colData = meta, 
