@@ -162,3 +162,115 @@ check_design_rank <- function(meta, design_formula, design_cols) {
         paste(design_cols, collapse = ", "), "."
     )
 }
+
+# Classifies sample size per contrast level -- not the total sample count -- into a
+# tiered severity, since DESeq2's ability to estimate dispersion and detect effects
+# depends on replicates within each compared group, not on how many samples exist
+# elsewhere in the design:
+#   - "blocking": fewer than 2 samples in either level. Dispersion cannot be estimated at
+#     all; the run must not proceed.
+#   - "severe": exactly 2 samples in the smaller level. Technically runnable, but so
+#     underpowered the result should carry a persistent warning.
+#   - "mild": 3-5 samples in the smaller level. Runnable, but only large effect sizes are
+#     likely to be recovered -- a lighter note, not a warning.
+#   - "ok": more than 5 samples in the smaller level.
+# The message always states the observed count per level, never just the category, so the
+# user can judge severity themselves rather than trust a label.
+check_replicate_counts <- function(meta, main_factor, ref_level, target_level) {
+    values <- as.character(meta[[main_factor]])
+    ref_n <- sum(values == ref_level, na.rm = TRUE)
+    target_n <- sum(values == target_level, na.rm = TRUE)
+    min_n <- min(ref_n, target_n)
+
+    counts_text <- paste0("Observed counts: ", ref_level, " = ", ref_n, ", ", target_level, " = ", target_n, ".")
+
+    if (min_n < 2) {
+        return(list(
+            status = "blocking", ref_n = ref_n, target_n = target_n,
+            message = paste(
+                "Need at least two samples in each compared group to estimate dispersion.",
+                counts_text
+            )
+        ))
+    }
+
+    if (min_n == 2) {
+        return(list(
+            status = "severe", ref_n = ref_n, target_n = target_n,
+            message = paste(
+                "Only 2 samples in the smaller group -- this comparison is severely underpowered.",
+                counts_text
+            )
+        ))
+    }
+
+    if (min_n <= 5) {
+        return(list(
+            status = "mild", ref_n = ref_n, target_n = target_n,
+            message = paste(
+                "Small group size (", min_n, "samples in the smaller group) -- only large",
+                "effect sizes are likely to be recovered.", counts_text
+            )
+        ))
+    }
+
+    list(status = "ok", ref_n = ref_n, target_n = target_n, message = counts_text)
+}
+
+# Heuristic check for whether a matrix looks like raw integer RNA-seq counts. Must be run
+# on the matrix BEFORE round() is applied -- round() makes everything a whole number, so
+# checking afterwards would defeat the purpose. DESeq2 expects raw counts; TPM, FPKM, or
+# already-normalised values will be silently accepted and rounded by round() into
+# meaningless input. This does not block the run -- some pipelines (e.g. pseudoalignment)
+# legitimately produce non-integer *estimated* counts that are still appropriate for
+# DESeq2 -- it only decides whether to warn the user prominently that an assumption is
+# being made.
+#
+# Two independent signals, either of which triggers the warning:
+#   - A large fraction of non-zero values are non-integer. Raw counts are exact integers,
+#     so any real contamination here (not just isolated floating-point noise) suggests
+#     continuous data such as TPM/FPKM/normalised counts.
+#   - A large fraction of non-zero values fall strictly between 0 and 1. Raw counts have
+#     no such values -- the smallest possible non-zero raw count is 1 -- so many samples
+#     under 1 is characteristic of TPM, where most lowly-expressed genes fall well under 1.
+NONINTEGER_COUNT_FRACTION_THRESHOLD <- 0.01
+BELOW_ONE_COUNT_FRACTION_THRESHOLD <- 0.25
+
+check_looks_like_raw_counts <- function(mm, noninteger_threshold = NONINTEGER_COUNT_FRACTION_THRESHOLD,
+                                         below_one_threshold = BELOW_ONE_COUNT_FRACTION_THRESHOLD) {
+    values <- as.numeric(mm)
+    values <- values[!is.na(values)]
+    nonzero <- values[values != 0]
+
+    if (length(nonzero) == 0) {
+        return(list(looks_raw = TRUE, message = NULL))
+    }
+
+    frac_noninteger <- mean(abs(nonzero - round(nonzero)) > .Machine$double.eps^0.5)
+    frac_below_one <- mean(nonzero > 0 & nonzero < 1)
+
+    reasons <- character(0)
+    if (frac_noninteger > noninteger_threshold) {
+        reasons <- c(reasons, paste0(
+            round(frac_noninteger * 100, 1), "% of non-zero values are not whole numbers"
+        ))
+    }
+    if (frac_below_one > below_one_threshold) {
+        reasons <- c(reasons, paste0(
+            round(frac_below_one * 100, 1), "% of non-zero values are below 1"
+        ))
+    }
+
+    if (length(reasons) == 0) {
+        return(list(looks_raw = TRUE, message = NULL))
+    }
+
+    list(
+        looks_raw = FALSE,
+        message = paste0(
+            "This count matrix does not look like raw integer counts (", paste(reasons, collapse = "; "),
+            "). DESeq2 expects raw counts; TPM, FPKM, or already-normalised values will be rounded ",
+            "and used anyway, but the results may not be meaningful."
+        )
+    )
+}

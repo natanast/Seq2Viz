@@ -302,16 +302,33 @@ deserver <- function(id, counts_data, meta_data) {
                 
                 mm <- as.matrix(cts[, -1, with=FALSE])
                 rownames(mm) <- cts[[1]]
-                
+
+                # Must run before round() -- afterwards everything is a whole number and
+                # the check would be meaningless.
+                raw_counts_check <- check_looks_like_raw_counts(mm)
+                if (!raw_counts_check$looks_raw) {
+                    showNotification(raw_counts_check$message, type = "warning", duration = NULL)
+                }
+
                 mm <- round(mm)
 
                 validate(
-                    need(nrow(meta) >= 2, "Need at least two samples for DESeq2 analysis."),
                     need(!identical(input$ref_level, input$target_level), "Choose two different groups for the comparison."),
                     need(all(c(input$ref_level, input$target_level) %in% unique(as.character(meta[[input$main_factor]]))),
                          "Selected contrast groups were not found in the matched metadata.")
                 )
-                
+
+                # Sample size is judged per contrast level, not by the total row count --
+                # a design with plenty of samples overall can still have too few in the
+                # two groups actually being compared.
+                replicate_check <- check_replicate_counts(meta, input$main_factor, input$ref_level, input$target_level)
+                validate(need(replicate_check$status != "blocking", replicate_check$message))
+                if (replicate_check$status == "severe") {
+                    showNotification(replicate_check$message, type = "warning", duration = NULL)
+                } else if (replicate_check$status == "mild") {
+                    showNotification(replicate_check$message, type = "message", duration = 10)
+                }
+
                 design_cols <- c(input$covariates, input$main_factor)
 
                 # The main factor always needs discrete ref/target levels to relevel()
@@ -368,7 +385,9 @@ deserver <- function(id, counts_data, meta_data) {
                 norm_dt <- as.data.table(norm_dt)
                 setcolorder(norm_dt, c("gene_name", setdiff(colnames(norm_dt), "gene_name")))
                 
-                list(res = res_dt, counts = norm_dt, dds = dds, meta = meta, covariate_types = covariate_types)
+                list(res = res_dt, counts = norm_dt, dds = dds, meta = meta,
+                     covariate_types = covariate_types, replicate_check = replicate_check,
+                     raw_counts_check = raw_counts_check)
                 
             }, error = function(e) {
                 output$error_msg <- renderText(paste("Analysis Failed:", e$message))
@@ -438,7 +457,9 @@ deserver <- function(id, counts_data, meta_data) {
             out <- analysis_out()
             if (is.null(out)) return(NULL)
 
-            list(res = out$res, counts = out$counts, meta = out$meta, covariate_types = out$covariate_types)
+            list(res = out$res, counts = out$counts, meta = out$meta,
+                 covariate_types = out$covariate_types, replicate_check = out$replicate_check,
+                 raw_counts_check = out$raw_counts_check)
         })
 
         return(list(
