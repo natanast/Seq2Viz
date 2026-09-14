@@ -162,3 +162,57 @@ check_design_rank <- function(meta, design_formula, design_cols) {
         paste(design_cols, collapse = ", "), "."
     )
 }
+
+# Classifies sample size per contrast level -- not the total sample count -- into a
+# tiered severity, since DESeq2's ability to estimate dispersion and detect effects
+# depends on replicates within each compared group, not on how many samples exist
+# elsewhere in the design:
+#   - "blocking": fewer than 2 samples in either level. Dispersion cannot be estimated at
+#     all; the run must not proceed.
+#   - "severe": exactly 2 samples in the smaller level. Technically runnable, but so
+#     underpowered the result should carry a persistent warning.
+#   - "mild": 3-5 samples in the smaller level. Runnable, but only large effect sizes are
+#     likely to be recovered -- a lighter note, not a warning.
+#   - "ok": more than 5 samples in the smaller level.
+# The message always states the observed count per level, never just the category, so the
+# user can judge severity themselves rather than trust a label.
+check_replicate_counts <- function(meta, main_factor, ref_level, target_level) {
+    values <- as.character(meta[[main_factor]])
+    ref_n <- sum(values == ref_level, na.rm = TRUE)
+    target_n <- sum(values == target_level, na.rm = TRUE)
+    min_n <- min(ref_n, target_n)
+
+    counts_text <- paste0("Observed counts: ", ref_level, " = ", ref_n, ", ", target_level, " = ", target_n, ".")
+
+    if (min_n < 2) {
+        return(list(
+            status = "blocking", ref_n = ref_n, target_n = target_n,
+            message = paste(
+                "Need at least two samples in each compared group to estimate dispersion.",
+                counts_text
+            )
+        ))
+    }
+
+    if (min_n == 2) {
+        return(list(
+            status = "severe", ref_n = ref_n, target_n = target_n,
+            message = paste(
+                "Only 2 samples in the smaller group -- this comparison is severely underpowered.",
+                counts_text
+            )
+        ))
+    }
+
+    if (min_n <= 5) {
+        return(list(
+            status = "mild", ref_n = ref_n, target_n = target_n,
+            message = paste(
+                "Small group size (", min_n, "samples in the smaller group) -- only large",
+                "effect sizes are likely to be recovered.", counts_text
+            )
+        ))
+    }
+
+    list(status = "ok", ref_n = ref_n, target_n = target_n, message = counts_text)
+}
