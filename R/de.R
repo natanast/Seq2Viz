@@ -302,7 +302,14 @@ deserver <- function(id, counts_data, meta_data) {
                 
                 mm <- as.matrix(cts[, -1, with=FALSE])
                 rownames(mm) <- cts[[1]]
-                
+
+                # Must run before round() -- afterwards everything is a whole number and
+                # the check would be meaningless.
+                raw_counts_check <- check_looks_like_raw_counts(mm)
+                if (!raw_counts_check$looks_raw) {
+                    showNotification(raw_counts_check$message, type = "warning", duration = NULL)
+                }
+
                 mm <- round(mm)
 
                 validate(
@@ -379,7 +386,8 @@ deserver <- function(id, counts_data, meta_data) {
                 setcolorder(norm_dt, c("gene_name", setdiff(colnames(norm_dt), "gene_name")))
                 
                 list(res = res_dt, counts = norm_dt, dds = dds, meta = meta,
-                     covariate_types = covariate_types, replicate_check = replicate_check)
+                     covariate_types = covariate_types, replicate_check = replicate_check,
+                     raw_counts_check = raw_counts_check)
                 
             }, error = function(e) {
                 output$error_msg <- renderText(paste("Analysis Failed:", e$message))
@@ -450,7 +458,8 @@ deserver <- function(id, counts_data, meta_data) {
             if (is.null(out)) return(NULL)
 
             list(res = out$res, counts = out$counts, meta = out$meta,
-                 covariate_types = out$covariate_types, replicate_check = out$replicate_check)
+                 covariate_types = out$covariate_types, replicate_check = out$replicate_check,
+                 raw_counts_check = out$raw_counts_check)
         })
 
         return(list(
